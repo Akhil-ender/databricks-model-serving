@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Databricks Model Serving App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h1 class="card-title mb-0">
+                            <i class="fas fa-brain me-2"></i>
+                            Databricks Model Serving
+                        </h1>
+                        <p class="mb-0">Switch between models and make predictions</p>
+                    </div>
+                    <div class="card-body">
+                        <!-- Model Selection -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="modelSelect" class="form-label">
+                                    <i class="fas fa-cogs me-2"></i>Select Model
+                                </label>
+                                <select id="modelSelect" class="form-select">
+                                    <option value="">Loading models...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button id="healthCheck" class="btn btn-outline-info">
+                                    <i class="fas fa-heartbeat me-2"></i>Health Check
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Model Information -->
+                        <div id="modelInfo" class="mb-4 d-none">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Model Information
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p id="modelDescription" class="mb-2"></p>
+                                    <div class="d-flex gap-2">
+                                        <button id="useFormBtn" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-wpforms me-1"></i>Use Form Input
+                                        </button>
+                                        <button id="useJsonBtn" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-code me-1"></i>Use JSON Input
+                                        </button>
+                                        <button id="loadSampleBtn" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-magic me-1"></i>Load Sample
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form-based Input (Model 1) -->
+                        <div id="formInputSection" class="mb-4 d-none">
+                            <label class="form-label">
+                                <i class="fas fa-wpforms me-2"></i>Model Input Form
+                            </label>
+                            <div class="card">
+                                <div class="card-body">
+                                    <div id="dynamicForm"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- JSON Input Data Section -->
+                        <div id="jsonInputSection" class="mb-4">
+                            <label for="inputData" class="form-label">
+                                <i class="fas fa-database me-2"></i>Input Data (JSON)
+                            </label>
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    Enter your input data in JSON format. Example formats:
+                                </small>
+                            </div>
+                            <div class="accordion mb-3" id="exampleAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="exampleHeading">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#exampleCollapse">
+                                            <i class="fas fa-lightbulb me-2"></i>View Example Formats
+                                        </button>
+                                    </h2>
+                                    <div id="exampleCollapse" class="accordion-collapse collapse" data-bs-parent="#exampleAccordion">
+                                        <div class="accordion-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6>Simple Instance Format:</h6>
+                                                    <pre class="bg-light p-2 small"><code>{
+  "feature1": 1.5,
+  "feature2": "value",
+  "feature3": 42
+}</code></pre>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6>DataFrame Split Format:</h6>
+                                                    <pre class="bg-light p-2 small"><code>{
+  "dataframe_split": {
+    "columns": ["feature1", "feature2"],
+    "data": [[1.5, "value"], [2.0, "other"]]
+  }
+}</code></pre>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <textarea id="inputData" class="form-control" rows="8" placeholder='Enter JSON input data here...
+Example:
+{
+  "feature1": 1.5,
+  "feature2": "value",
+  "feature3": 42
+}'></textarea>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2 mb-4">
+                            <button id="predictBtn" class="btn btn-success" disabled>
+                                <i class="fas fa-play me-2"></i>Make Prediction
+                            </button>
+                            <button id="clearBtn" class="btn btn-outline-secondary">
+                                <i class="fas fa-eraser me-2"></i>Clear
+                            </button>
+                        </div>
+
+                        <!-- Loading Indicator -->
+                        <div id="loadingIndicator" class="text-center d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Making prediction...</p>
+                        </div>
+
+                        <!-- Results Section -->
+                        <div id="resultsSection" class="d-none">
+                            <label class="form-label">
+                                <i class="fas fa-chart-line me-2"></i>Prediction Results
+                            </label>
+                            <div id="results" class="bg-light p-3 rounded border"></div>
+                        </div>
+
+                        <!-- Error Section -->
+                        <div id="errorSection" class="d-none">
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Error:</strong>
+                                <span id="errorMessage"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
