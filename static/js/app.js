@@ -5,7 +5,7 @@ class ShippingCostApp {
         this.models = {};
         this.countriesData = [];
         this.productsData = [];
-        this.currentPredictionMode = 'all';
+        this.currentPredictionMode = 'individual';
         this.init();
     }
 
@@ -31,11 +31,13 @@ class ShippingCostApp {
 
         // Primary selector changes
         document.getElementById('supplierCountrySelect').addEventListener('change', () => {
+            this.updatePartNumber(); // This will automatically trigger updateFeatureAvailability()
             this.updatePredictButton();
             this.hideResults();
         });
 
         document.getElementById('productSelect').addEventListener('change', () => {
+            this.updatePartNumber(); // This will automatically trigger updateFeatureAvailability()
             this.updatePredictButton();
             this.hideResults();
         });
@@ -43,6 +45,20 @@ class ShippingCostApp {
         document.getElementById('riskClassificationSelect').addEventListener('change', () => {
             this.updatePredictButton();
             this.hideResults();
+        });
+
+        // Part number direct input
+        document.getElementById('partNumberDisplay').addEventListener('input', (e) => {
+            const partNumber = e.target.value.trim();
+            if (partNumber && partNumber.length > 3) { // Only trigger after meaningful input
+                this.hideError(); // Hide any previous error messages
+                this.handleDirectPartNumberInput(partNumber);
+            } else if (!partNumber) {
+                // Clear fields if part number is cleared
+                this.hideError(); // Hide any error messages
+                this.resetFeatureVisibility();
+                this.updatePredictButton(); // Re-enable button if other conditions are met
+            }
         });
 
         // Secondary form inputs
@@ -127,6 +143,10 @@ class ShippingCostApp {
             const option = document.createElement('option');
             option.value = country.value;
             option.textContent = country.text;
+            // Set R1 as default
+            if (country.text === 'R1') {
+                option.selected = true;
+            }
             countrySelect.appendChild(option);
         });
 
@@ -140,15 +160,23 @@ class ShippingCostApp {
             productSelect.appendChild(option);
         });
 
-        // Populate model selection dropdown
+        // Populate model selection dropdown with median as default
         const modelSelect = document.getElementById('modelSelect');
         modelSelect.innerHTML = '<option value="">Choose a model...</option>';
         Object.entries(this.models).forEach(([key, model]) => {
             const option = document.createElement('option');
             option.value = key;
             option.textContent = model.name;
+            // Set median model as default
+            if (key === 'shipping_cost_median') {
+                option.selected = true;
+            }
             modelSelect.appendChild(option);
         });
+        
+        // Update part number on initial load if defaults are set
+        // Feature availability will be automatically triggered when part number is populated
+        this.updatePartNumber();
     }
 
     getFormData() {
@@ -163,18 +191,45 @@ class ShippingCostApp {
         if (productId) formData.product_id = parseInt(productId);
         if (riskClassification) formData.risk_classification = parseInt(riskClassification);
         
-        // Secondary numeric inputs
+        // Secondary numeric inputs - provide defaults for disabled fields
         const leadTimeDays = document.getElementById('leadTimeDays').value;
-        const supplierReliabilityScore = document.getElementById('supplierReliabilityScore').value;
-        const weatherConditionSeverity = document.getElementById('weatherConditionSeverity').value;
-        const routeRiskLevel = document.getElementById('routeRiskLevel').value;
-        const disruptionLikelihoodScore = document.getElementById('disruptionLikelihoodScore').value;
+        const supplierReliabilityScore = document.getElementById('supplierReliabilityScore');
+        const weatherConditionSeverity = document.getElementById('weatherConditionSeverity');
+        const routeRiskLevel = document.getElementById('routeRiskLevel');
+        const disruptionLikelihoodScore = document.getElementById('disruptionLikelihoodScore');
         
-        if (leadTimeDays) formData.lead_time_days = parseFloat(leadTimeDays);
-        if (supplierReliabilityScore) formData.supplier_reliability_score = parseFloat(supplierReliabilityScore);
-        if (weatherConditionSeverity) formData.weather_condition_severity = parseFloat(weatherConditionSeverity);
-        if (routeRiskLevel) formData.route_risk_level = parseFloat(routeRiskLevel);
-        if (disruptionLikelihoodScore) formData.disruption_likelihood_score = parseFloat(disruptionLikelihoodScore);
+        // Always include lead time
+        if (leadTimeDays) {
+            formData.lead_time_days = parseFloat(leadTimeDays);
+        }
+        
+        // Handle supplier reliability - use value if enabled, default if disabled
+        if (!supplierReliabilityScore.disabled && supplierReliabilityScore.value) {
+            formData.supplier_reliability_score = parseFloat(supplierReliabilityScore.value);
+        } else if (supplierReliabilityScore.disabled) {
+            formData.supplier_reliability_score = 75.0; // Default for disabled state
+        }
+        
+        // Handle weather condition - use value if enabled, default if disabled
+        if (!weatherConditionSeverity.disabled && weatherConditionSeverity.value) {
+            formData.weather_condition_severity = parseFloat(weatherConditionSeverity.value);
+        } else if (weatherConditionSeverity.disabled) {
+            formData.weather_condition_severity = 2.0; // Default for disabled state
+        }
+        
+        // Handle route risk - use value if enabled, default if disabled
+        if (!routeRiskLevel.disabled && routeRiskLevel.value) {
+            formData.route_risk_level = parseFloat(routeRiskLevel.value);
+        } else if (routeRiskLevel.disabled) {
+            formData.route_risk_level = 1.5; // Default for disabled state
+        }
+        
+        // Handle disruption likelihood - use value if enabled, default if disabled
+        if (!disruptionLikelihoodScore.disabled && disruptionLikelihoodScore.value) {
+            formData.disruption_likelihood_score = parseFloat(disruptionLikelihoodScore.value);
+        } else if (disruptionLikelihoodScore.disabled) {
+            formData.disruption_likelihood_score = 10.0; // Default for disabled state
+        }
         
         return formData;
     }
@@ -188,16 +243,33 @@ class ShippingCostApp {
         if (!formData.product_id) errors.push('MGC5 is required');
         if (!formData.risk_classification) errors.push('Risk Classification is required');
         
-        // Check required secondary inputs
+        // Check required secondary inputs - only validate enabled fields
         if (!formData.lead_time_days) errors.push('Lead Time Days is required');
-        if (!formData.supplier_reliability_score) errors.push('Supplier Reliability Score is required');
-        if (!formData.weather_condition_severity) errors.push('Weather Condition Severity is required');
-        if (!formData.route_risk_level) errors.push('Route Risk Level is required');
-        if (!formData.disruption_likelihood_score) errors.push('Disruption Likelihood Score is required');
+        
+        // Only validate enabled fields for user input
+        const supplierReliabilityScore = document.getElementById('supplierReliabilityScore');
+        if (!supplierReliabilityScore.disabled && !supplierReliabilityScore.value) {
+            errors.push('Supplier Reliability Score is required');
+        }
+        
+        const weatherConditionSeverity = document.getElementById('weatherConditionSeverity');
+        if (!weatherConditionSeverity.disabled && !weatherConditionSeverity.value) {
+            errors.push('Weather Condition Severity is required');
+        }
+        
+        const routeRiskLevel = document.getElementById('routeRiskLevel');
+        if (!routeRiskLevel.disabled && !routeRiskLevel.value) {
+            errors.push('Route Risk Level is required');
+        }
+        
+        const disruptionLikelihoodScore = document.getElementById('disruptionLikelihoodScore');
+        if (!disruptionLikelihoodScore.disabled && !disruptionLikelihoodScore.value) {
+            errors.push('Disruption Likelihood Score is required');
+        }
         
         // Validate risk classification range
-        if (formData.risk_classification && (formData.risk_classification < 2 || formData.risk_classification > 4)) {
-            errors.push('Risk Classification must be between 2-4');
+        if (formData.risk_classification && (formData.risk_classification < 1 || formData.risk_classification > 4)) {
+            errors.push('Risk Classification must be between 1-4');
         }
         
         return { valid: errors.length === 0, errors, data: formData };
@@ -567,16 +639,16 @@ class ShippingCostApp {
     }
 
     clearForm() {
-        // Reset prediction mode to all
-        document.getElementById('predictionMode').value = 'all';
-        this.currentPredictionMode = 'all';
+        // Reset prediction mode to individual (median default)
+        document.getElementById('predictionMode').value = 'individual';
+        this.currentPredictionMode = 'individual';
         this.toggleModelSelection();
         
-        // Clear model selection
-        document.getElementById('modelSelect').value = '';
+        // Reset model selection to median default
+        document.getElementById('modelSelect').value = 'shipping_cost_median';
         
-        // Clear primary selectors
-        document.getElementById('supplierCountrySelect').value = '';
+        // Reset primary selectors to defaults (R1 for region, clear others)
+        document.getElementById('supplierCountrySelect').value = '1'; // R1
         document.getElementById('productSelect').value = '';
         document.getElementById('riskClassificationSelect').value = '';
         
@@ -587,9 +659,295 @@ class ShippingCostApp {
         document.getElementById('routeRiskLevel').value = '';
         document.getElementById('disruptionLikelihoodScore').value = '';
         
+        // Update part number based on new defaults
+        // Feature availability will be automatically triggered
+        this.updatePartNumber();
+        
         this.hideResults();
         this.hideError();
         this.updatePredictButton();
+    }
+
+    async updatePartNumber() {
+        const regionSelect = document.getElementById('supplierCountrySelect');
+        const mgc5Select = document.getElementById('productSelect');
+        const partNumberInput = document.getElementById('partNumberDisplay');
+        
+        const regionValue = regionSelect.value;
+        const mgc5Value = mgc5Select.value;
+        
+        // Clear part number if either selection is empty
+        if (!regionValue || !mgc5Value) {
+            partNumberInput.value = '';
+            return;
+        }
+        
+        // Get region text and MGC5 text for lookup
+        const regionText = regionSelect.options[regionSelect.selectedIndex].text;
+        const mgc5Text = mgc5Select.options[mgc5Select.selectedIndex].text;
+        
+        try {
+            const response = await fetch(`/api/part-number?mgc5=${encodeURIComponent(mgc5Text)}&region=${encodeURIComponent(regionText)}`);
+            const result = await response.json();
+            
+            if (response.ok && result.part_number) {
+                partNumberInput.value = result.part_number;
+                // Trigger feature availability and populate related fields based on the part number
+                this.populateFieldsFromPartNumber(result.part_number);
+            } else {
+                partNumberInput.value = 'Not found';
+                // Show message when region/MGC5 combination is not supported
+                this.showError('No price prediction model currently available for this Region/MGC5 combination. Please try a different combination.');
+                this.resetFeatureVisibility();
+            }
+        } catch (error) {
+            console.error('Error fetching part number:', error);
+            partNumberInput.value = 'Error';
+            // Reset features on error
+            this.resetFeatureVisibility();
+        }
+    }
+
+    async updateFeatureAvailability() {
+        const partNumberInput = document.getElementById('partNumberDisplay');
+        const partNumber = partNumberInput.value;
+        
+        // Reset feature visibility if part number is empty or shows error states
+        if (!partNumber || partNumber === 'Not found' || partNumber === 'Error' || partNumber.includes('Part number will appear')) {
+            this.resetFeatureVisibility();
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(partNumber)}`);
+            const result = await response.json();
+            
+            if (response.ok && result.features) {
+                this.applyFeatureVisibility(result.features);
+            } else {
+                this.resetFeatureVisibility();
+            }
+        } catch (error) {
+            console.error('Error fetching feature availability:', error);
+            this.resetFeatureVisibility();
+        }
+    }
+
+
+    applyFeatureVisibility(features) {
+        // Show/hide form fields based on feature availability
+        const featureMap = {
+            'advanced_weather_tracking': 'weatherConditionSeverity',
+            'route_optimization': 'routeRiskLevel',
+            'disruption_prediction': 'disruptionLikelihoodScore',
+            'reliability_scoring': 'supplierReliabilityScore'
+        };
+        
+        Object.entries(featureMap).forEach(([featureKey, fieldId]) => {
+            const isAvailable = features[featureKey];
+            const fieldContainer = document.querySelector(`[data-feature="${featureKey}"]`);
+            const field = document.getElementById(fieldId);
+            
+            if (fieldContainer && field) {
+                if (isAvailable) {
+                    // Show field
+                    fieldContainer.style.display = 'block';
+                    fieldContainer.style.opacity = '1';
+                    field.disabled = false;
+                    
+                    // Update badge to show available
+                    const badge = fieldContainer.querySelector(`[data-feature-badge="${featureKey}"]`);
+                    if (badge) {
+                        badge.className = badge.className.replace('bg-secondary', 'bg-success');
+                        badge.textContent = badge.textContent.replace('Unavailable', '');
+                    }
+                } else {
+                    // Dim and disable field
+                    fieldContainer.style.opacity = '0.5';
+                    field.disabled = true;
+                    field.value = '';
+                    
+                    // Update badge to show unavailable
+                    const badge = fieldContainer.querySelector(`[data-feature-badge="${featureKey}"]`);
+                    if (badge) {
+                        badge.className = badge.className.replace(/bg-(success|info|warning|primary)/, 'bg-secondary');
+                        badge.textContent = 'Unavailable';
+                    }
+                }
+            }
+        });
+        
+        // Note: All models remain available for selection, but features are controlled
+        // No need to restrict model dropdown
+    }
+
+
+    resetFeatureVisibility() {
+        // Reset all features to visible and enabled
+        const featureFields = document.querySelectorAll('[data-feature]');
+        featureFields.forEach(container => {
+            container.style.display = 'block';
+            container.style.opacity = '1';
+            
+            const field = container.querySelector('input, select');
+            if (field) {
+                field.disabled = false;
+            }
+            
+            // Reset badges
+            const badge = container.querySelector('[data-feature-badge]');
+            if (badge) {
+                const featureType = badge.getAttribute('data-feature-badge');
+                const badgeClasses = {
+                    'advanced_weather_tracking': 'bg-info',
+                    'route_optimization': 'bg-warning', 
+                    'disruption_prediction': 'bg-success',
+                    'reliability_scoring': 'bg-primary'
+                };
+                
+                badge.className = `badge ${badgeClasses[featureType]} ms-2`;
+                const badgeTexts = {
+                    'advanced_weather_tracking': 'Advanced',
+                    'route_optimization': 'Premium',
+                    'disruption_prediction': 'Predictive', 
+                    'reliability_scoring': 'Standard'
+                };
+                badge.textContent = badgeTexts[featureType];
+            }
+        });
+        
+        // Reset model dropdown to show all models
+        this.populateModelDropdown();
+    }
+
+    populateModelDropdown() {
+        const modelSelect = document.getElementById('modelSelect');
+        modelSelect.innerHTML = '<option value="">Choose a model...</option>';
+        Object.entries(this.models).forEach(([key, model]) => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = model.name;
+            // Set median model as default
+            if (key === 'shipping_cost_median') {
+                option.selected = true;
+            }
+            modelSelect.appendChild(option);
+        });
+    }
+
+    async populateFieldsFromPartNumber(partNumber) {
+        // First update feature availability
+        await this.updateFeatureAvailability();
+        
+        // Get part number details to populate region and MGC5
+        try {
+            const response = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(partNumber)}`);
+            const result = await response.json();
+            
+            if (response.ok && result.features) {
+                const features = result.features;
+                
+                // Populate Region field
+                const regionSelect = document.getElementById('supplierCountrySelect');
+                const mgc5Select = document.getElementById('productSelect');
+                
+                // Find and set the region value
+                const regionValue = this.getRegionValue(features.region);
+                if (regionValue) {
+                    regionSelect.value = regionValue;
+                }
+                
+                // Find and set the MGC5 value  
+                const mgc5Value = this.getMGC5Value(features.mgc5);
+                if (mgc5Value) {
+                    mgc5Select.value = mgc5Value;
+                }
+                
+                console.log(`Part Number ${partNumber} populated: Region=${features.region}, MGC5=${features.mgc5}, Category=${features.part_category}`);
+            }
+        } catch (error) {
+            console.error('Error fetching part number details:', error);
+        }
+    }
+
+    getRegionValue(regionText) {
+        // Convert region text (e.g., 'R1') to dropdown value (e.g., 1)
+        const regionMap = {
+            'R1': '1',
+            'R2': '2', 
+            'R3': '3',
+            'R4': '4'
+        };
+        return regionMap[regionText];
+    }
+
+    getMGC5Value(mgc5Text) {
+        // Convert MGC5 text (e.g., 'D1408') to dropdown value (e.g., 1408)
+        const mgc5Map = {
+            'D1408': '1408',
+            'D1601': '1601',
+            'D0303': '303'
+        };
+        return mgc5Map[mgc5Text];
+    }
+
+    async handleDirectPartNumberInput(partNumber) {
+        // User typed directly in part number field - populate region and MGC5
+        try {
+            const response = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(partNumber)}`);
+            const result = await response.json();
+            
+            if (response.ok && result.features) {
+                const features = result.features;
+                
+                // Populate Region and MGC5 fields based on part number
+                const regionSelect = document.getElementById('supplierCountrySelect');
+                const mgc5Select = document.getElementById('productSelect');
+                
+                // Set region value
+                const regionValue = this.getRegionValue(features.region);
+                if (regionValue) {
+                    regionSelect.value = regionValue;
+                }
+                
+                // Set MGC5 value
+                const mgc5Value = this.getMGC5Value(features.mgc5);
+                if (mgc5Value) {
+                    mgc5Select.value = mgc5Value;
+                }
+                
+                // Apply feature visibility
+                this.applyFeatureVisibility(features);
+                
+                // Hide any previous error messages
+                this.hideError();
+                
+                // Update predict button state
+                this.updatePredictButton();
+                
+                console.log(`Direct part number input "${partNumber}" populated: Region=${features.region}, MGC5=${features.mgc5}, Category=${features.part_category}`);
+            } else {
+                // Part number not found - show "no model" message and reset features
+                this.showNoModelAvailable(partNumber);
+                this.resetFeatureVisibility();
+                console.log(`Part number "${partNumber}" not found in database`);
+            }
+        } catch (error) {
+            console.error('Error looking up part number:', error);
+            this.resetFeatureVisibility();
+        }
+    }
+
+    showNoModelAvailable(partNumber) {
+        // Clear region and MGC5 when part number is not found
+        document.getElementById('supplierCountrySelect').value = '';
+        document.getElementById('productSelect').value = '';
+        
+        // Show error message indicating no model is available
+        this.showError(`No price prediction model currently available for part number "${partNumber}".`);
+        
+        // Disable the predict button
+        document.getElementById('predictBtn').disabled = true;
     }
 }
 

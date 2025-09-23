@@ -37,10 +37,10 @@
                                         </label>
                                         <select id="predictionMode" class="form-select form-select-lg">
                                             <option value="all">All Models (Simultaneous)</option>
-                                            <option value="individual">Individual Model</option>
+                                            <option value="individual" selected>Individual Model</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-6" id="individualModelSection" style="display: none;">
+                                    <div class="col-md-6" id="individualModelSection">
                                         <label for="modelSelect" class="form-label">
                                             <i class="fas fa-robot me-2"></i>Select Model
                                         </label>
@@ -63,12 +63,21 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-4">
+                                        <label for="partNumberDisplay" class="form-label">
+                                            <i class="fas fa-barcode me-2"></i>Part Number <span class="badge bg-primary ms-2">Primary</span>
+                                        </label>
+                                        <input type="text" class="form-control form-control-lg" id="partNumberDisplay" 
+                                               placeholder="Enter part number (e.g., ADX16694, KK24076)">
+                                        <div class="form-text">Primary lookup - drives Region and MGC5 selection</div>
+                                    </div>
+                                    <div class="col-md-4">
                                         <label for="supplierCountrySelect" class="form-label">
                                             <i class="fas fa-map-marker-alt me-2"></i>Region
                                         </label>
                                         <select id="supplierCountrySelect" class="form-select form-select-lg">
                                             <option value="">Select Region...</option>
                                         </select>
+                                        <div class="form-text">Auto-populated from Part Number</div>
                                     </div>
                                     <div class="col-md-4">
                                         <label for="productSelect" class="form-label">
@@ -77,19 +86,9 @@
                                         <select id="productSelect" class="form-select form-select-lg">
                                             <option value="">Select MGC5...</option>
                                         </select>
+                                        <div class="form-text">Auto-populated from Part Number</div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label for="riskClassificationSelect" class="form-label">
-                                            <i class="fas fa-exclamation-triangle me-2"></i>Risk Level
-                                        </label>
-                                        <select id="riskClassificationSelect" class="form-select form-select-lg">
-                                            <option value="">Select Risk...</option>
-                                            <option value="1">1 - Low Risk</option>
-                                            <option value="2">2 - Medium Risk</option>
-                                            <option value="3">3 - High Risk</option>
-                                            <option value="4">4 - Very High Risk</option>
-                                        </select>
-                                    </div>
+                                </div>
                                 </div>
                             </div>
                         </div>
@@ -103,13 +102,13 @@
                             </div>
                         </div>
 
+
                         <!-- Secondary Parameters Form -->
                         <div class="card border-secondary mb-4">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0 text-secondary">
-                                    <i class="fas fa-clipboard-list me-2"></i>Additional Supplier Shipping Parameters
+                            <div class="card-header bg-light text-white">
+                                <h5 class="mb-0 text-secondary text-white">
+                                    <i class="fas fa-clipboard-list me-2"></i>Input Parameters for the Model
                                 </h5>
-                                <small class="text-muted">Configure detailed logistics parameters</small>
                             </div>
                             <div class="card-body">
                                 <div class="row g-3">
@@ -122,7 +121,7 @@
                                                placeholder="Expected delivery time in days" min="0.5" max="365">
                                         <div class="form-text">Expected delivery time in days</div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-6" data-feature="reliability_scoring">
                                         <label for="supplierReliabilityScore" class="form-label">
                                             <i class="fas fa-star me-2"></i>Supplier Reliability Score
                                             <small class="text-muted">(double)</small>
@@ -131,7 +130,7 @@
                                                placeholder="Supplier reliability rating" min="0" max="100">
                                         <div class="form-text">Supplier reliability rating (0-100)</div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-6" data-feature="advanced_weather_tracking">
                                         <label for="weatherConditionSeverity" class="form-label">
                                             <i class="fas fa-cloud-rain me-2"></i>Weather Condition Severity
                                             <small class="text-muted">(double)</small>
@@ -140,7 +139,7 @@
                                                placeholder="Weather impact severity" min="0" max="10">
                                         <div class="form-text">Weather impact severity score (0-10)</div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-6" data-feature="route_optimization">
                                         <label for="routeRiskLevel" class="form-label">
                                             <i class="fas fa-route me-2"></i>Route Risk Level
                                             <small class="text-muted">(double)</small>
@@ -149,7 +148,7 @@
                                                placeholder="Route security and safety risk" min="0" max="10">
                                         <div class="form-text">Route security and safety risk (0-10)</div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-6" data-feature="disruption_prediction">
                                         <label for="disruptionLikelihoodScore" class="form-label">
                                             <i class="fas fa-exclamation-circle me-2"></i>Disruption Likelihood Score
                                             <small class="text-muted">(double)</small>
@@ -157,6 +156,20 @@
                                         <input type="number" step="0.1" class="form-control" id="disruptionLikelihoodScore" 
                                                placeholder="Probability of disruptions" min="0" max="100">
                                         <div class="form-text">Probability of shipping disruptions (0-100)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="riskClassificationSelect" class="form-label">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>Risk Level
+                                            <small class="text-muted">(1-4)</small>
+                                        </label>
+                                        <select id="riskClassificationSelect" class="form-select">
+                                            <option value="">Select Risk...</option>
+                                            <option value="1">1 - Low Risk</option>
+                                            <option value="2">2 - Medium Risk</option>
+                                            <option value="3">3 - High Risk</option>
+                                            <option value="4">4 - Very High Risk</option>
+                                        </select>
+                                        <div class="form-text">Risk category classification (1-4)</div>
                                     </div>
                                     <div class="col-md-6 d-flex align-items-end">
                                         <button id="loadSampleBtn" class="btn btn-outline-warning w-100">

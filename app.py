@@ -208,6 +208,65 @@ def predict_all():
         logger.error(f"Error in predict_all endpoint: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
+@app.route('/api/part-number', methods=['GET'])
+def get_part_number():
+    """Get part number based on MGC5 and Region"""
+    try:
+        mgc5 = request.args.get('mgc5')
+        region = request.args.get('region')
+        
+        if not mgc5 or not region:
+            return jsonify({"error": "Both 'mgc5' and 'region' parameters are required"}), 400
+        
+        # Look up part number
+        part_number = Config.PART_NUMBER_LOOKUP.get((mgc5, region))
+        
+        if not part_number:
+            return jsonify({
+                "error": f"No part number found for MGC5: {mgc5}, Region: {region}",
+                "mgc5": mgc5,
+                "region": region,
+                "part_number": None
+            }), 404
+        
+        return jsonify({
+            "mgc5": mgc5,
+            "region": region,
+            "part_number": part_number
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in part number lookup: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+@app.route('/api/feature-availability', methods=['GET'])
+def get_feature_availability():
+    """Get feature availability based on Part Number (primary lookup)"""
+    try:
+        part_number = request.args.get('part_number')
+        
+        if not part_number:
+            return jsonify({"error": "Part number parameter is required"}), 400
+        
+        # Look up feature availability by part number
+        features = Config.PART_FEATURE_AVAILABILITY.get(part_number)
+        
+        if not features:
+            return jsonify({
+                "error": f"No feature configuration found for Part Number: {part_number}",
+                "part_number": part_number,
+                "features": None
+            }), 404
+        
+        return jsonify({
+            "part_number": part_number,
+            "features": features
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in feature availability lookup: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""

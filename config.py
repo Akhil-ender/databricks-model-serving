@@ -8,6 +8,130 @@ class Config:
     DATABRICKS_BASE_URL = os.getenv('DATABRICKS_BASE_URL', 'https://wl-dbr-dbr-dev-ws-wl.cloud.databricks.com/serving-endpoints/shipping-price')
     DATABRICKS_TOKEN = os.getenv('DATABRICKS_TOKEN', 'your-token-here')
     
+    # Lookup table for MGC5/Region to Part Number mapping
+    PART_NUMBER_LOOKUP = {
+        ('D1408', 'R4'): 'KK24076',
+        ('D1408', 'R3'): 'KK110968', 
+        ('D1408', 'R2'): 'KK113130',
+        ('D1408', 'R1'): 'ADX16694',
+        ('D1601', 'R4'): 'F682849',
+        ('D1601', 'R3'): 'AW30717',
+        ('D1601', 'R2'): 'L227221',
+        ('D0303', 'R4'): 'AH145242',
+        ('D0303', 'R3'): 'AFH218732',
+        ('D0303', 'R1'): 'ADX12969'
+    }
+    
+    # Feature availability based on Part Number (primary lookup component)
+    # Note: All three models are always available for prediction, but UI features vary
+    PART_FEATURE_AVAILABILITY = {
+        # Heavy Industrial Parts - KK series (D1408 category)
+        'KK24076': {
+            'part_category': 'Heavy Industrial',
+            'mgc5': 'D1408',
+            'region': 'R4',
+            'advanced_weather_tracking': True,
+            'route_optimization': True,
+            'disruption_prediction': True,
+            'reliability_scoring': True,
+            'description': 'Heavy Industrial Parts - Full Premium Features'
+        },
+        'KK110968': {
+            'part_category': 'Heavy Industrial',
+            'mgc5': 'D1408',
+            'region': 'R3',
+            'advanced_weather_tracking': True,
+            'route_optimization': True,
+            'disruption_prediction': True,
+            'reliability_scoring': True,
+            'description': 'Heavy Industrial Parts - Full Premium Features'
+        },
+        'KK113130': {
+            'part_category': 'Heavy Industrial',
+            'mgc5': 'D1408',
+            'region': 'R2',
+            'advanced_weather_tracking': True,
+            'route_optimization': True,
+            'disruption_prediction': True,
+            'reliability_scoring': True,
+            'description': 'Heavy Industrial Parts - Full Premium Features'
+        },
+        'ADX16694': {
+            'part_category': 'Heavy Industrial',
+            'mgc5': 'D1408',
+            'region': 'R1',
+            'advanced_weather_tracking': True,
+            'route_optimization': True,
+            'disruption_prediction': True,
+            'reliability_scoring': True,
+            'description': 'Heavy Industrial Parts - Full Premium Features'
+        },
+        
+        # Electronics/Technology Parts - F/AW/L series (D1601 category)
+        'F682849': {
+            'part_category': 'Electronics',
+            'mgc5': 'D1601',
+            'region': 'R4',
+            'advanced_weather_tracking': True,
+            'route_optimization': False,
+            'disruption_prediction': True,
+            'reliability_scoring': True,
+            'description': 'Electronics Parts - Weather Sensitive, No Route Optimization'
+        },
+        'AW30717': {
+            'part_category': 'Electronics',
+            'mgc5': 'D1601',
+            'region': 'R3',
+            'advanced_weather_tracking': True,
+            'route_optimization': False,
+            'disruption_prediction': True,
+            'reliability_scoring': True,
+            'description': 'Electronics Parts - Weather Sensitive, No Route Optimization'
+        },
+        'L227221': {
+            'part_category': 'Electronics',
+            'mgc5': 'D1601',
+            'region': 'R2',
+            'advanced_weather_tracking': True,
+            'route_optimization': False,
+            'disruption_prediction': True,
+            'reliability_scoring': True,
+            'description': 'Electronics Parts - Weather Sensitive, No Route Optimization'
+        },
+        
+        # Standard/Basic Parts - AH/AFH/ADX series (D0303 category)
+        'AH145242': {
+            'part_category': 'Standard',
+            'mgc5': 'D0303',
+            'region': 'R4',
+            'advanced_weather_tracking': False,
+            'route_optimization': False,
+            'disruption_prediction': False,
+            'reliability_scoring': True,
+            'description': 'Standard Parts - Basic Features Only'
+        },
+        'AFH218732': {
+            'part_category': 'Standard',
+            'mgc5': 'D0303',
+            'region': 'R3',
+            'advanced_weather_tracking': False,
+            'route_optimization': False,
+            'disruption_prediction': False,
+            'reliability_scoring': True,
+            'description': 'Standard Parts - Basic Features Only'
+        },
+        'ADX12969': {
+            'part_category': 'Standard',
+            'mgc5': 'D0303',
+            'region': 'R1',
+            'advanced_weather_tracking': False,
+            'route_optimization': False,
+            'disruption_prediction': False,
+            'reliability_scoring': True,
+            'description': 'Standard Parts - Basic Features Only'
+        }
+    }
+    
     # Databricks Model Serving Endpoints
     MODEL_ENDPOINTS = {
         'shipping_cost_90th_percentile': {
