@@ -1,10 +1,11 @@
-// Databricks Model Serving App JavaScript
+// Shipping Cost Prediction App JavaScript
 
-class DatabricksModelApp {
+class ShippingCostApp {
     constructor() {
         this.models = {};
-        this.currentModel = null;
-        this.currentInputMode = 'json'; // 'json' or 'form'
+        this.countriesData = [];
+        this.productsData = [];
+        this.currentPredictionMode = 'all';
         this.init();
     }
 
@@ -14,33 +15,61 @@ class DatabricksModelApp {
     }
 
     bindEvents() {
-        // Model selection change
-        document.getElementById('modelSelect').addEventListener('change', (e) => {
-            this.onModelChange(e.target.value);
-        });
-
-        // Input mode buttons
-        document.getElementById('useFormBtn').addEventListener('click', () => {
-            this.switchInputMode('form');
-        });
-
-        document.getElementById('useJsonBtn').addEventListener('click', () => {
-            this.switchInputMode('json');
-        });
-
-        document.getElementById('loadSampleBtn').addEventListener('click', () => {
-            this.loadSampleData();
-        });
-
-        // Input data change
-        document.getElementById('inputData').addEventListener('input', () => {
+        // Prediction mode change
+        document.getElementById('predictionMode').addEventListener('change', (e) => {
+            this.currentPredictionMode = e.target.value;
+            this.toggleModelSelection();
             this.updatePredictButton();
             this.hideResults();
         });
 
-        // Predict button click
+        // Individual model selection
+        document.getElementById('modelSelect').addEventListener('change', () => {
+            this.updatePredictButton();
+            this.hideResults();
+        });
+
+        // Primary selector changes
+        document.getElementById('supplierCountrySelect').addEventListener('change', () => {
+            this.updatePredictButton();
+            this.hideResults();
+        });
+
+        document.getElementById('productSelect').addEventListener('change', () => {
+            this.updatePredictButton();
+            this.hideResults();
+        });
+
+        document.getElementById('riskClassificationSelect').addEventListener('change', () => {
+            this.updatePredictButton();
+            this.hideResults();
+        });
+
+        // Secondary form inputs
+        const secondaryInputs = [
+            'leadTimeDays', 'supplierReliabilityScore', 'weatherConditionSeverity',
+            'routeRiskLevel', 'disruptionLikelihoodScore'
+        ];
+
+        secondaryInputs.forEach(inputId => {
+            document.getElementById(inputId).addEventListener('input', () => {
+                this.updatePredictButton();
+                this.hideResults();
+            });
+        });
+
+        // Load sample data button
+        document.getElementById('loadSampleBtn').addEventListener('click', () => {
+            this.loadSampleData();
+        });
+
+        // Predict button click - handles both modes
         document.getElementById('predictBtn').addEventListener('click', () => {
-            this.makePrediction();
+            if (this.currentPredictionMode === 'all') {
+                this.makeAllModelsPrediction();
+            } else {
+                this.makeIndividualPrediction();
+            }
         });
 
         // Clear button click
@@ -54,233 +83,192 @@ class DatabricksModelApp {
         });
     }
 
+    toggleModelSelection() {
+        const individualSection = document.getElementById('individualModelSection');
+        if (this.currentPredictionMode === 'individual') {
+            individualSection.style.display = 'block';
+        } else {
+            individualSection.style.display = 'none';
+        }
+    }
+
     async loadModels() {
         try {
             const response = await fetch('/api/models');
             const models = await response.json();
             
             this.models = models;
-            this.populateModelSelect(models);
+            this.extractDropdownData(models);
+            this.populateDropdowns();
         } catch (error) {
             console.error('Error loading models:', error);
             this.showError('Failed to load models: ' + error.message);
         }
     }
 
-    populateModelSelect(models) {
-        const select = document.getElementById('modelSelect');
-        select.innerHTML = '<option value="">Select a model...</option>';
-        
-        Object.entries(models).forEach(([key, model]) => {
+    extractDropdownData(models) {
+        // Extract country and product data from the first model (they should be the same across models)
+        const firstModel = Object.values(models)[0];
+        if (firstModel && firstModel.input_schema) {
+            if (firstModel.input_schema.supplier_country && firstModel.input_schema.supplier_country.options) {
+                this.countriesData = firstModel.input_schema.supplier_country.options;
+            }
+            if (firstModel.input_schema.product_id && firstModel.input_schema.product_id.options) {
+                this.productsData = firstModel.input_schema.product_id.options;
+            }
+        }
+    }
+
+    populateDropdowns() {
+        // Populate region dropdown
+        const countrySelect = document.getElementById('supplierCountrySelect');
+        countrySelect.innerHTML = '<option value="">Select Region...</option>';
+        this.countriesData.forEach(country => {
+            const option = document.createElement('option');
+            option.value = country.value;
+            option.textContent = country.text;
+            countrySelect.appendChild(option);
+        });
+
+        // Populate MGC5 dropdown
+        const productSelect = document.getElementById('productSelect');
+        productSelect.innerHTML = '<option value="">Select MGC5...</option>';
+        this.productsData.forEach(product => {
+            const option = document.createElement('option');
+            option.value = product.value;
+            option.textContent = product.text;
+            productSelect.appendChild(option);
+        });
+
+        // Populate model selection dropdown
+        const modelSelect = document.getElementById('modelSelect');
+        modelSelect.innerHTML = '<option value="">Choose a model...</option>';
+        Object.entries(this.models).forEach(([key, model]) => {
             const option = document.createElement('option');
             option.value = key;
             option.textContent = model.name;
-            select.appendChild(option);
-        });
-    }
-
-    onModelChange(modelKey) {
-        this.currentModel = modelKey ? this.models[modelKey] : null;
-        
-        if (this.currentModel) {
-            this.showModelInfo();
-            this.createDynamicForm();
-            this.loadSampleData();
-        } else {
-            this.hideModelInfo();
-        }
-        
-        this.updatePredictButton();
-        this.hideResults();
-        this.hideError();
-    }
-
-    showModelInfo() {
-        const modelInfo = document.getElementById('modelInfo');
-        const modelDescription = document.getElementById('modelDescription');
-        
-        modelDescription.textContent = this.currentModel.description || 'No description available';
-        modelInfo.classList.remove('d-none');
-    }
-
-    hideModelInfo() {
-        document.getElementById('modelInfo').classList.add('d-none');
-        document.getElementById('formInputSection').classList.add('d-none');
-    }
-
-    switchInputMode(mode) {
-        this.currentInputMode = mode;
-        
-        const formSection = document.getElementById('formInputSection');
-        const jsonSection = document.getElementById('jsonInputSection');
-        const useFormBtn = document.getElementById('useFormBtn');
-        const useJsonBtn = document.getElementById('useJsonBtn');
-        
-        if (mode === 'form') {
-            formSection.classList.remove('d-none');
-            jsonSection.classList.add('d-none');
-            useFormBtn.className = 'btn btn-sm btn-primary';
-            useJsonBtn.className = 'btn btn-sm btn-outline-primary';
-        } else {
-            formSection.classList.add('d-none');
-            jsonSection.classList.remove('d-none');
-            useFormBtn.className = 'btn btn-sm btn-outline-primary';
-            useJsonBtn.className = 'btn btn-sm btn-primary';
-        }
-        
-        this.updatePredictButton();
-    }
-
-    createDynamicForm() {
-        const dynamicForm = document.getElementById('dynamicForm');
-        
-        if (!this.currentModel || !this.currentModel.input_schema) {
-            dynamicForm.innerHTML = '<p class="text-muted">No form available for this model</p>';
-            return;
-        }
-        
-        const schema = this.currentModel.input_schema;
-        let formHtml = '<div class="row">';
-        
-        Object.entries(schema).forEach(([fieldName, fieldInfo], index) => {
-            const colClass = index % 2 === 0 ? 'col-md-6' : 'col-md-6';
-            
-            formHtml += `
-                <div class="${colClass} mb-3">
-                    <label for="field_${fieldName}" class="form-label">
-                        ${fieldName}
-                        <small class="text-muted">(${fieldInfo.type})</small>
-                    </label>
-                    <input 
-                        type="number" 
-                        class="form-control" 
-                        id="field_${fieldName}" 
-                        name="${fieldName}"
-                        placeholder="${fieldInfo.description}"
-                        min="${fieldInfo.min || ''}"
-                        max="${fieldInfo.max || ''}"
-                        step="${fieldInfo.type === 'double' ? '0.01' : '1'}"
-                        data-field-name="${fieldName}"
-                    >
-                    <div class="form-text">${fieldInfo.description}</div>
-                </div>
-            `;
-        });
-        
-        formHtml += '</div>';
-        dynamicForm.innerHTML = formHtml;
-        
-        // Add event listeners to form fields
-        dynamicForm.querySelectorAll('input').forEach(input => {
-            input.addEventListener('input', () => {
-                this.updatePredictButton();
-                this.hideResults();
-            });
+            modelSelect.appendChild(option);
         });
     }
 
     getFormData() {
         const formData = {};
-        const dynamicForm = document.getElementById('dynamicForm');
         
-        dynamicForm.querySelectorAll('input').forEach(input => {
-            const fieldName = input.dataset.fieldName;
-            const value = input.value.trim();
-            
-            if (value !== '') {
-                const fieldInfo = this.currentModel.input_schema[fieldName];
-                if (fieldInfo.type === 'double') {
-                    formData[fieldName] = parseFloat(value);
-                } else {
-                    formData[fieldName] = parseInt(value);
-                }
-            }
-        });
+        // Primary selectors
+        const supplierCountry = document.getElementById('supplierCountrySelect').value;
+        const productId = document.getElementById('productSelect').value;
+        const riskClassification = document.getElementById('riskClassificationSelect').value;
+        
+        if (supplierCountry) formData.supplier_country = parseInt(supplierCountry);
+        if (productId) formData.product_id = parseInt(productId);
+        if (riskClassification) formData.risk_classification = parseInt(riskClassification);
+        
+        // Secondary numeric inputs
+        const leadTimeDays = document.getElementById('leadTimeDays').value;
+        const supplierReliabilityScore = document.getElementById('supplierReliabilityScore').value;
+        const weatherConditionSeverity = document.getElementById('weatherConditionSeverity').value;
+        const routeRiskLevel = document.getElementById('routeRiskLevel').value;
+        const disruptionLikelihoodScore = document.getElementById('disruptionLikelihoodScore').value;
+        
+        if (leadTimeDays) formData.lead_time_days = parseFloat(leadTimeDays);
+        if (supplierReliabilityScore) formData.supplier_reliability_score = parseFloat(supplierReliabilityScore);
+        if (weatherConditionSeverity) formData.weather_condition_severity = parseFloat(weatherConditionSeverity);
+        if (routeRiskLevel) formData.route_risk_level = parseFloat(routeRiskLevel);
+        if (disruptionLikelihoodScore) formData.disruption_likelihood_score = parseFloat(disruptionLikelihoodScore);
         
         return formData;
     }
 
     validateFormData() {
-        if (!this.currentModel || !this.currentModel.input_schema) {
-            return { valid: false, errors: ['No model schema available'] };
-        }
-        
         const formData = this.getFormData();
         const errors = [];
         
-        Object.entries(this.currentModel.input_schema).forEach(([fieldName, fieldInfo]) => {
-            if (!(fieldName in formData)) {
-                errors.push(`${fieldName} is required`);
-                return;
-            }
-            
-            const value = formData[fieldName];
-            if (fieldInfo.min !== undefined && value < fieldInfo.min) {
-                errors.push(`${fieldName} must be at least ${fieldInfo.min}`);
-            }
-            if (fieldInfo.max !== undefined && value > fieldInfo.max) {
-                errors.push(`${fieldName} must be at most ${fieldInfo.max}`);
-            }
-        });
+        // Check required primary selectors
+        if (!formData.supplier_country) errors.push('Region is required');
+        if (!formData.product_id) errors.push('MGC5 is required');
+        if (!formData.risk_classification) errors.push('Risk Classification is required');
+        
+        // Check required secondary inputs
+        if (!formData.lead_time_days) errors.push('Lead Time Days is required');
+        if (!formData.supplier_reliability_score) errors.push('Supplier Reliability Score is required');
+        if (!formData.weather_condition_severity) errors.push('Weather Condition Severity is required');
+        if (!formData.route_risk_level) errors.push('Route Risk Level is required');
+        if (!formData.disruption_likelihood_score) errors.push('Disruption Likelihood Score is required');
+        
+        // Validate risk classification range
+        if (formData.risk_classification && (formData.risk_classification < 2 || formData.risk_classification > 4)) {
+            errors.push('Risk Classification must be between 2-4');
+        }
         
         return { valid: errors.length === 0, errors, data: formData };
     }
 
-    updatePredictButton() {
-        const modelSelected = document.getElementById('modelSelect').value;
-        const predictBtn = document.getElementById('predictBtn');
-        
-        let hasValidInput = false;
-        
-        if (this.currentInputMode === 'json') {
-            const inputData = document.getElementById('inputData').value.trim();
-            hasValidInput = inputData !== '';
-        } else if (this.currentInputMode === 'form') {
-            const validation = this.validateFormData();
-            hasValidInput = validation.valid;
-        }
-        
-        predictBtn.disabled = !modelSelected || !hasValidInput;
-    }
-
-    async makePrediction() {
-        const modelKey = document.getElementById('modelSelect').value;
-        
-        if (!modelKey) {
-            this.showError('Please select a model');
+    async makeAllModelsPrediction() {
+        const validation = this.validateFormData();
+        if (!validation.valid) {
+            this.showError('Form validation errors: ' + validation.errors.join(', '));
             return;
         }
 
-        let inputData;
-        
-        if (this.currentInputMode === 'form') {
-            const validation = this.validateFormData();
-            if (!validation.valid) {
-                this.showError('Form validation errors: ' + validation.errors.join(', '));
-                return;
-            }
-            inputData = validation.data;
-        } else {
-            const inputDataText = document.getElementById('inputData').value.trim();
-            if (!inputDataText) {
-                this.showError('Please enter input data');
-                return;
-            }
-
-            // Validate JSON
-            try {
-                inputData = JSON.parse(inputDataText);
-            } catch (error) {
-                this.showError('Invalid JSON format in input data: ' + error.message);
-                return;
-            }
-        }
-
+        const inputData = validation.data;
         this.showLoading(true);
         this.hideResults();
         this.hideError();
 
         try {
+            const response = await fetch('/api/predict/all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    input: inputData
+                })
+            });
+
+            const result = await response.json();
+            this.showLoading(false);
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'All models prediction failed');
+            }
+
+            this.displayAllModelsResults(result, inputData);
+        } catch (error) {
+            this.showLoading(false);
+            this.showError('Prediction failed: ' + error.message);
+        }
+    }
+
+    async makeIndividualPrediction() {
+        const validation = this.validateFormData();
+        if (!validation.valid) {
+            this.showError('Form validation errors: ' + validation.errors.join(', '));
+            return;
+        }
+
+        const selectedModel = document.getElementById('modelSelect').value;
+        if (!selectedModel) {
+            this.showError('Please select a model for individual prediction');
+            return;
+        }
+
+        const inputData = validation.data;
+        this.showLoading(true);
+        this.hideResults();
+        this.hideError();
+
+        try {
+            const result = await this.callModel(selectedModel, inputData);
+            this.showLoading(false);
+            this.displayIndividualResult(result, selectedModel, inputData);
+        } catch (error) {
+            this.showLoading(false);
+            this.showError('Prediction failed: ' + error.message);
+        }
+    }
+
+    async callModel(modelKey, inputData) {
             const response = await fetch('/api/predict', {
                 method: 'POST',
                 headers: {
@@ -293,17 +281,176 @@ class DatabricksModelApp {
             });
 
             const result = await response.json();
-            this.showLoading(false);
-
-            if (response.ok && result.success) {
-                this.showResults(result);
-            } else {
-                this.showError(result.error || 'Prediction failed');
-            }
-        } catch (error) {
-            this.showLoading(false);
-            this.showError('Network error: ' + error.message);
+        
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Model prediction failed');
         }
+        
+        return result;
+    }
+
+    displayAllModelsResults(allResults, inputData) {
+        // Show all models results section
+        document.getElementById('allModelsResults').classList.remove('d-none');
+        document.getElementById('individualResults').classList.add('d-none');
+        document.getElementById('resultsTitle').textContent = 'All Models Comparison Results';
+
+        // Map results to display containers
+        const modelMapping = {
+            'shipping_cost_90th_percentile': 'percentile90Results',
+            'shipping_cost_10th_percentile': 'xgboostResults', // Note: container ID kept as 'xgboostResults' for consistency
+            'shipping_cost_median': 'medianResults'
+        };
+
+        // Display results for each model
+        Object.entries(allResults.results).forEach(([modelKey, result]) => {
+            const containerId = modelMapping[modelKey];
+            if (containerId) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = this.formatModelResult(result, this.models[modelKey].name);
+            }
+        });
+
+        // Display errors if any
+        if (allResults.errors && Object.keys(allResults.errors).length > 0) {
+            Object.entries(allResults.errors).forEach(([modelKey, error]) => {
+                const containerId = modelMapping[modelKey];
+                if (containerId) {
+                    const container = document.getElementById(containerId);
+                    container.innerHTML = `<div class="alert alert-danger">
+                        <strong>Error:</strong> ${error.error || 'Prediction failed'}
+                    </div>`;
+                }
+            });
+        }
+
+        // Create comparison summary
+        const summaryDiv = document.getElementById('comparisonSummary');
+        summaryDiv.innerHTML = this.createAllModelsComparisonSummary(allResults, inputData);
+
+        // Show results section
+        document.getElementById('resultsSection').classList.remove('d-none');
+        
+        // Scroll to results
+        document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    displayIndividualResult(result, modelKey, inputData) {
+        // Show individual result section
+        document.getElementById('individualResults').classList.remove('d-none');
+        document.getElementById('allModelsResults').classList.add('d-none');
+        document.getElementById('resultsTitle').textContent = 'Individual Model Result';
+        
+        // Update model name in header
+        document.getElementById('selectedModelName').textContent = this.models[modelKey].name;
+
+        // Display result
+        const container = document.getElementById('singleModelResults');
+        container.innerHTML = this.formatModelResult(result, this.models[modelKey].name);
+
+        // Show results section
+        document.getElementById('resultsSection').classList.remove('d-none');
+        
+        // Scroll to results
+        document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    extractPredictionValue(result) {
+        // Extract the numeric prediction value from the result
+        if (result.prediction && result.prediction.predictions && Array.isArray(result.prediction.predictions)) {
+            return result.prediction.predictions[0];
+        }
+        return 0;
+    }
+
+    formatModelResult(result, type = '') {
+        const predictionValue = this.extractPredictionValue(result);
+        const formattedValue = typeof predictionValue === 'number' ? predictionValue.toFixed(2) : predictionValue;
+        
+        return `
+            <div class="mb-3">
+                <div class="text-center mb-3">
+                    <h2 class="display-6 fw-bold text-primary">$${formattedValue}</h2>
+                    <small class="text-muted">${type} Cost</small>
+                </div>
+                <div class="bg-light p-2 rounded">
+                    <small class="text-muted">
+                        <strong>Model:</strong> ${result.model}<br>
+                        ${result.calculated ? '<em></em>' : '<em>API prediction</em>'}<br>
+                        <strong>Timestamp:</strong> ${new Date().toLocaleString()}
+                    </small>
+                </div>
+                <details class="mt-2">
+                    <summary class="btn btn-outline-secondary btn-sm">View Raw Data</summary>
+                    <pre class="mt-2 bg-light p-2 rounded small">${JSON.stringify(result.prediction, null, 2)}</pre>
+                </details>
+            </div>
+        `;
+    }
+
+    createAllModelsComparisonSummary(allResults, inputData) {
+        const regionName = this.countriesData.find(c => c.value == inputData.supplier_country)?.text || 'Unknown';
+        const mgc5Name = this.productsData.find(p => p.value == inputData.product_id)?.text || 'Unknown';
+        
+        // Extract values from successful results
+        const values = {};
+        Object.entries(allResults.results).forEach(([modelKey, result]) => {
+            values[modelKey] = this.extractPredictionValue(result);
+        });
+
+        const valuesArray = Object.values(values);
+        const minValue = Math.min(...valuesArray);
+        const maxValue = Math.max(...valuesArray);
+        const avgValue = valuesArray.reduce((sum, val) => sum + val, 0) / valuesArray.length;
+        
+        return `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Input Summary</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>Region:</strong> ${regionName}</li>
+                        <li><strong>MGC5:</strong> ${mgc5Name}</li>
+                        <li><strong>Risk Level:</strong> ${inputData.risk_classification}</li>
+                        <li><strong>Lead Time:</strong> ${inputData.lead_time_days} days</li>
+                        <li><strong>Reliability:</strong> ${inputData.supplier_reliability_score}%</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>Model Statistics</h6>
+                    <div class="alert alert-info">
+                        <p><strong>Models Called:</strong> ${allResults.total_models}</p>
+                        <p><strong>Successful:</strong> ${allResults.successful_predictions}</p>
+                        <p><strong>Failed:</strong> ${allResults.failed_predictions}</p>
+                        ${valuesArray.length > 0 ? `
+                        <hr>
+                        <p><strong>Lowest Cost:</strong> $${minValue.toFixed(2)} <span class="badge bg-success">Best</span></p>
+                        <p><strong>Average Cost:</strong> $${avgValue.toFixed(2)} <span class="badge bg-primary">Average</span></p>
+                        <p><strong>Highest Cost:</strong> $${maxValue.toFixed(2)} <span class="badge bg-warning">Highest</span></p>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    updatePredictButton() {
+        const predictBtn = document.getElementById('predictBtn');
+        const validation = this.validateFormData();
+        
+        // For individual mode, also check if a model is selected
+        let isValid = validation.valid;
+        if (this.currentPredictionMode === 'individual') {
+            const selectedModel = document.getElementById('modelSelect').value;
+            isValid = isValid && selectedModel !== '';
+        }
+        
+        predictBtn.disabled = !isValid;
+        
+        // Update button text based on mode
+        const buttonText = this.currentPredictionMode === 'all' 
+            ? '<i class="fas fa-calculator me-2"></i>Get All Model Predictions'
+            : '<i class="fas fa-robot me-2"></i>Get Individual Prediction';
+        predictBtn.innerHTML = buttonText;
     }
 
     async performHealthCheck() {
@@ -350,22 +497,52 @@ class DatabricksModelApp {
         }
     }
 
-    showResults(result) {
-        const resultsSection = document.getElementById('resultsSection');
-        const resultsDiv = document.getElementById('results');
+    loadSampleData() {
+        // Load sample data into form fields
+        const firstModel = Object.values(this.models)[0];
         
-        // Format the results nicely
-        const formattedResult = {
-            model: result.model,
-            timestamp: new Date().toISOString(),
-            prediction: result.prediction
-        };
-        
-        resultsDiv.innerHTML = `<pre>${JSON.stringify(formattedResult, null, 2)}</pre>`;
-        resultsSection.classList.remove('d-none');
-        
-        // Scroll to results
-        resultsSection.scrollIntoView({ behavior: 'smooth' });
+        if (firstModel && firstModel.sample_input) {
+            const sample = firstModel.sample_input;
+            
+            // Set primary selectors
+            if (sample.supplier_country) {
+                const countrySelect = document.getElementById('supplierCountrySelect');
+                if (countrySelect) countrySelect.value = sample.supplier_country;
+            }
+            if (sample.product_id) {
+                const productSelect = document.getElementById('productSelect');
+                if (productSelect) productSelect.value = sample.product_id;
+            }
+            if (sample.risk_classification) {
+                const riskSelect = document.getElementById('riskClassificationSelect');
+                if (riskSelect) riskSelect.value = sample.risk_classification;
+            }
+            
+            // Set secondary inputs
+            if (sample.lead_time_days) {
+                const leadTimeInput = document.getElementById('leadTimeDays');
+                if (leadTimeInput) leadTimeInput.value = sample.lead_time_days;
+            }
+            if (sample.supplier_reliability_score) {
+                const reliabilityInput = document.getElementById('supplierReliabilityScore');
+                if (reliabilityInput) reliabilityInput.value = sample.supplier_reliability_score;
+            }
+            if (sample.weather_condition_severity) {
+                const weatherInput = document.getElementById('weatherConditionSeverity');
+                if (weatherInput) weatherInput.value = sample.weather_condition_severity;
+            }
+            if (sample.route_risk_level) {
+                const routeInput = document.getElementById('routeRiskLevel');
+                if (routeInput) routeInput.value = sample.route_risk_level;
+            }
+            if (sample.disruption_likelihood_score) {
+                const disruptionInput = document.getElementById('disruptionLikelihoodScore');
+                if (disruptionInput) disruptionInput.value = sample.disruption_likelihood_score;
+            }
+            
+            // Trigger change events to update button state
+            this.updatePredictButton();
+        }
     }
 
     showError(message) {
@@ -381,6 +558,8 @@ class DatabricksModelApp {
 
     hideResults() {
         document.getElementById('resultsSection').classList.add('d-none');
+        document.getElementById('allModelsResults').classList.add('d-none');
+        document.getElementById('individualResults').classList.add('d-none');
     }
 
     hideError() {
@@ -388,47 +567,33 @@ class DatabricksModelApp {
     }
 
     clearForm() {
-        document.getElementById('inputData').value = '';
+        // Reset prediction mode to all
+        document.getElementById('predictionMode').value = 'all';
+        this.currentPredictionMode = 'all';
+        this.toggleModelSelection();
+        
+        // Clear model selection
         document.getElementById('modelSelect').value = '';
         
-        // Clear dynamic form
-        const dynamicForm = document.getElementById('dynamicForm');
-        dynamicForm.querySelectorAll('input').forEach(input => {
-            input.value = '';
-        });
+        // Clear primary selectors
+        document.getElementById('supplierCountrySelect').value = '';
+        document.getElementById('productSelect').value = '';
+        document.getElementById('riskClassificationSelect').value = '';
         
-        this.currentModel = null;
+        // Clear secondary inputs
+        document.getElementById('leadTimeDays').value = '';
+        document.getElementById('supplierReliabilityScore').value = '';
+        document.getElementById('weatherConditionSeverity').value = '';
+        document.getElementById('routeRiskLevel').value = '';
+        document.getElementById('disruptionLikelihoodScore').value = '';
+        
         this.hideResults();
         this.hideError();
-        this.hideModelInfo();
-        this.updatePredictButton();
-    }
-
-    loadSampleData() {
-        if (!this.currentModel || !this.currentModel.sample_input) {
-            return;
-        }
-
-        const sampleData = this.currentModel.sample_input;
-
-        if (this.currentInputMode === 'json') {
-            const inputData = document.getElementById('inputData');
-            inputData.value = JSON.stringify(sampleData, null, 2);
-        } else if (this.currentInputMode === 'form') {
-            const dynamicForm = document.getElementById('dynamicForm');
-            Object.entries(sampleData).forEach(([fieldName, value]) => {
-                const input = dynamicForm.querySelector(`input[data-field-name="${fieldName}"]`);
-                if (input) {
-                    input.value = value;
-                }
-            });
-        }
-
         this.updatePredictButton();
     }
 }
 
 // Initialize the app when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new DatabricksModelApp();
+    new ShippingCostApp();
 });

@@ -1,57 +1,176 @@
-/* Custom styles for Databricks Model Serving App */
+/* Custom styles for Shipping Cost Prediction App */
 
 body {
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 50%, #f8f9fa 100%);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+}
+
+/* Shipping themed background pattern */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 80%, rgba(13, 110, 253, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(25, 135, 84, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(108, 117, 125, 0.03) 0%, transparent 50%);
+    z-index: -1;
+    pointer-events: none;
 }
 
 .card {
     border: none;
-    border-radius: 15px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
 }
 
 .card-header {
-    border-radius: 15px 15px 0 0 !important;
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    border-radius: 20px 20px 0 0 !important;
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 50%, #198754 100%);
+    position: relative;
+    overflow: hidden;
 }
 
+/* Shipping icon animation in header */
+.card-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 200%;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"><path d="M10,50 Q30,30 50,50 T90,50"/><circle cx="20" cy="20" r="2"/><circle cx="80" cy="80" r="2"/></g></svg>');
+    animation: float 20s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes float {
+    0% { transform: translateX(-100%) rotate(0deg); }
+    100% { transform: translateX(100%) rotate(360deg); }
+}
+
+/* Enhanced form controls with shipping theme */
 .form-control, .form-select {
-    border-radius: 8px;
+    border-radius: 12px;
     border: 2px solid #e9ecef;
-    transition: border-color 0.3s ease;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(5px);
 }
 
 .form-control:focus, .form-select:focus {
     border-color: #0d6efd;
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-1px);
 }
 
+/* Shipping-themed button styles */
 .btn {
-    border-radius: 8px;
+    border-radius: 12px;
     font-weight: 500;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
 }
 
+.btn-success {
+    background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #157347 0%, #0f9b67 100%);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0b5ed7 0%, #520dc2 100%);
+}
+
+/* Loading button animation */
+.btn:disabled {
+    background: #6c757d;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Shipping icon animations */
+.btn-success::before {
+    content: '🚚';
+    position: absolute;
+    left: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: left 0.3s ease;
+    opacity: 0;
+}
+
+.btn-success:hover::before {
+    left: 10px;
+    opacity: 1;
+}
+
+/* Results display with shipping theme */
 #results {
-    font-family: 'Courier New', monospace;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
     font-size: 14px;
     white-space: pre-wrap;
     max-height: 400px;
     overflow-y: auto;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
 }
 
+#results::before {
+    content: '📊';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.2rem;
+    opacity: 0.5;
+}
+
+/* Enhanced accordion styling */
 .accordion-button:not(.collapsed) {
-    background-color: #e7f1ff;
+    background: linear-gradient(135deg, #e7f1ff 0%, #cce7ff 100%);
     color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.accordion-button {
+    border-radius: 10px !important;
+    transition: all 0.3s ease;
+}
+
+.accordion-button:hover {
+    background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+    transform: translateY(-1px);
 }
 
 pre code {
     font-size: 12px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 6px;
+    padding: 0.5rem;
 }
 
 .text-success {
@@ -62,9 +181,22 @@ pre code {
     color: #dc3545 !important;
 }
 
+/* Enhanced spinner with shipping theme */
 .spinner-border {
     width: 3rem;
     height: 3rem;
+    border-width: 4px;
+}
+
+.spinner-border.text-success {
+    border-color: #198754;
+    border-right-color: transparent;
+    animation: spinner-border 0.75s linear infinite, pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4); }
+    100% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); }
 }
 
 /* Animation for result display */
@@ -83,17 +215,70 @@ pre code {
     }
 }
 
-/* Model form specific styles */
-#dynamicForm .form-control {
+/* Shipping form specific styles */
+#dynamicForm .form-control,
+#dynamicForm .form-select {
     transition: all 0.3s ease;
+    position: relative;
 }
 
-#dynamicForm .form-control:focus {
+#dynamicForm .form-control:focus,
+#dynamicForm .form-select:focus {
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
 }
 
-.model-info-card {
+/* Special styling for shipping parameters */
+#dynamicForm .mb-3 {
+    position: relative;
+    overflow: hidden;
+}
+
+#dynamicForm .mb-3::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #0d6efd, transparent);
+    transition: left 0.3s ease;
+}
+
+#dynamicForm .mb-3:hover::before {
+    left: 100%;
+}
+
+/* Field-specific icons and styling */
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.form-label small {
+    margin-left: auto;
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+/* Shipping-themed card borders */
+.model-info-card,
+.card.border-info {
     border-left: 4px solid #0d6efd;
+    border-image: linear-gradient(135deg, #0d6efd, #198754) 1;
+}
+
+.card.border-primary {
+    border: 2px solid;
+    border-image: linear-gradient(135deg, #0d6efd, #6610f2) 1;
+}
+
+.card.border-success {
+    border: 2px solid;
+    border-image: linear-gradient(135deg, #198754, #20c997) 1;
 }
 
 /* Input mode toggle buttons */
@@ -123,6 +308,18 @@ pre code {
     background: linear-gradient(45deg, #ffc107, #fd7e14);
     border: none;
     color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+#loadSampleBtn::before {
+    content: '⚡';
+    position: absolute;
+    left: -25px;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: left 0.3s ease;
+    opacity: 0;
 }
 
 #loadSampleBtn:hover {
@@ -130,18 +327,199 @@ pre code {
     color: white;
 }
 
-/* Responsive adjustments */
+#loadSampleBtn:hover::before {
+    left: 8px;
+    opacity: 1;
+}
+
+/* Enhanced loading states */
+.loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Shipping cost results styling */
+.cost-highlight {
+    background: linear-gradient(135deg, #198754, #20c997);
+    color: white;
+    padding: 1rem;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 1rem 0;
+    box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+}
+
+/* Alert and error styling */
+.alert {
+    border-radius: 12px;
+    border: none;
+    backdrop-filter: blur(10px);
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(220, 53, 69, 0.2));
+    color: #842029;
+    border-left: 4px solid #dc3545;
+}
+
+/* Results containers styling */
+.results-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 200px;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 13px;
+}
+
+.results-container pre {
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Primary selectors styling */
+.form-select-lg {
+    font-size: 1.1rem;
+    padding: 0.75rem 1rem;
+    border-width: 2px;
+}
+
+.form-select-lg:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    border-color: #0d6efd;
+}
+
+/* Card improvements */
+.card.border-primary {
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.02) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.card.border-secondary {
+    background: linear-gradient(135deg, rgba(108, 117, 125, 0.02) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.card.border-warning {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.02) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.card.border-success {
+    background: linear-gradient(135deg, rgba(25, 135, 84, 0.02) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+/* Enhanced comparison summary */
+#comparisonSummary {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+#comparisonSummary .alert {
+    margin-bottom: 0;
+    background: linear-gradient(135deg, rgba(13, 202, 240, 0.1) 0%, rgba(13, 202, 240, 0.05) 100%);
+    border: 1px solid rgba(13, 202, 240, 0.2);
+}
+
+/* Pricing display styling */
+.display-6.fw-bold {
+    color: #198754 !important;
+    font-weight: 700 !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.results-container .badge {
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+/* Details/Summary styling */
+details summary {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+details summary:hover {
+    background-color: #e9ecef;
+}
+
+details[open] summary {
+    margin-bottom: 0.5rem;
+}
+
+/* Responsive adjustments for 3-column layout */
+@media (max-width: 992px) {
+    .col-md-4 {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Enhanced responsive design for shipping app */
 @media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
     .container {
-        padding: 0 15px;
+        padding: 0;
+        margin: 0;
     }
     
     .card {
-        margin: 10px 0;
+        margin: 5px 0;
+        border-radius: 15px;
+    }
+    
+    .card-header {
+        border-radius: 15px 15px 0 0 !important;
+        padding: 1rem;
+    }
+    
+    .card-title {
+        font-size: 1.25rem;
     }
     
     .btn {
         width: 100%;
         margin-bottom: 10px;
+        padding: 12px;
+    }
+    
+    #dynamicForm .row {
+        margin: 0;
+    }
+    
+    #dynamicForm .col-md-6 {
+        padding: 0 5px;
+        margin-bottom: 1rem;
+    }
+    
+    .form-control, .form-select {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    #results {
+        font-size: 12px;
+        max-height: 250px;
+    }
+}
+
+@media (max-width: 480px) {
+    .d-flex.gap-2.flex-wrap {
+        flex-direction: column;
+    }
+    
+    .btn-lg {
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
     }
 }

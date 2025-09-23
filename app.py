@@ -144,6 +144,70 @@ def predict():
         logger.error(f"Error in predict endpoint: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
+@app.route('/api/predict/all', methods=['POST'])
+def predict_all():
+    """Make predictions using all available models simultaneously"""
+    import concurrent.futures
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        input_data = data.get('input')
+        
+        if not input_data:
+            return jsonify({"error": "Input data is required"}), 400
+        
+        # Get all model keys
+        model_keys = list(model_client.config.MODEL_ENDPOINTS.keys())
+        
+        # Make concurrent predictions
+        results = {}
+        errors = {}
+        
+        def make_prediction(model_key):
+            try:
+                result = model_client.predict(model_key, input_data)
+                return model_key, result
+            except Exception as e:
+                return model_key, {"success": False, "error": str(e)}
+        
+        # Use ThreadPoolExecutor for concurrent API calls
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_model = {executor.submit(make_prediction, model_key): model_key 
+                             for model_key in model_keys}
+            
+            for future in concurrent.futures.as_completed(future_to_model):
+                model_key, result = future.result()
+                if result.get('success', False):
+                    results[model_key] = result
+                else:
+                    errors[model_key] = result
+        
+        # Return combined results
+        response = {
+            "success": len(results) > 0,
+            "timestamp": request.headers.get('X-Request-Time', ''),
+            "total_models": len(model_keys),
+            "successful_predictions": len(results),
+            "failed_predictions": len(errors),
+            "results": results
+        }
+        
+        if errors:
+            response["errors"] = errors
+        
+        if len(results) == 0:
+            return jsonify(response), 500
+        
+        return jsonify(response)
+            
+    except Exception as e:
+        logger.error(f"Error in predict_all endpoint: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""

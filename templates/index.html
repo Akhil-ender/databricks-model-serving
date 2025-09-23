@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Databricks Model Serving App</title>
+    <title>Pricing Cost Prediction - Databricks Model Serving</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
@@ -15,141 +15,269 @@
                 <div class="card shadow">
                     <div class="card-header bg-primary text-white">
                         <h1 class="card-title mb-0">
-                            <i class="fas fa-brain me-2"></i>
-                            Databricks Model Serving
+                            <i class="fas fa-shipping-fast me-2"></i>
+                            Pricing Cost Prediction
                         </h1>
-                        <p class="mb-0">Switch between models and make predictions</p>
+                        <p class="mb-0">Pricing Model Router </p>
                     </div>
                     <div class="card-body">
                         <!-- Model Selection -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label for="modelSelect" class="form-label">
-                                    <i class="fas fa-cogs me-2"></i>Select Model
-                                </label>
-                                <select id="modelSelect" class="form-select">
-                                    <option value="">Loading models...</option>
-                                </select>
+                        <div class="card border-info mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-brain me-2"></i>Model Selection
+                                </h5>
+                                <small>Choose prediction approach: individual model or all models simultaneously</small>
                             </div>
-                            <div class="col-md-6 d-flex align-items-end">
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="predictionMode" class="form-label">
+                                            <i class="fas fa-cogs me-2"></i>Prediction Mode
+                                        </label>
+                                        <select id="predictionMode" class="form-select form-select-lg">
+                                            <option value="all">All Models (Simultaneous)</option>
+                                            <option value="individual">Individual Model</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6" id="individualModelSection" style="display: none;">
+                                        <label for="modelSelect" class="form-label">
+                                            <i class="fas fa-robot me-2"></i>Select Model
+                                        </label>
+                                        <select id="modelSelect" class="form-select form-select-lg">
+                                            <option value="">Choose a model...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Primary Selectors -->
+                        <div class="card border-primary mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-sliders-h me-2"></i>Primary Supplier Parameters
+                                </h5>
+                                <small>Select your main supplier criteria below</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="supplierCountrySelect" class="form-label">
+                                            <i class="fas fa-map-marker-alt me-2"></i>Region
+                                        </label>
+                                        <select id="supplierCountrySelect" class="form-select form-select-lg">
+                                            <option value="">Select Region...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="productSelect" class="form-label">
+                                            <i class="fas fa-cube me-2"></i>MGC5
+                                        </label>
+                                        <select id="productSelect" class="form-select form-select-lg">
+                                            <option value="">Select MGC5...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="riskClassificationSelect" class="form-label">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>Risk Level
+                                        </label>
+                                        <select id="riskClassificationSelect" class="form-select form-select-lg">
+                                            <option value="">Select Risk...</option>
+                                            <option value="1">1 - Low Risk</option>
+                                            <option value="2">2 - Medium Risk</option>
+                                            <option value="3">3 - High Risk</option>
+                                            <option value="4">4 - Very High Risk</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Health -->
+                        <div class="row mb-4">
+                            <div class="col-12 text-end">
                                 <button id="healthCheck" class="btn btn-outline-info">
-                                    <i class="fas fa-heartbeat me-2"></i>Health Check
+                                    <i class="fas fa-satellite-dish me-2"></i>System Health
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Model Information -->
-                        <div id="modelInfo" class="mb-4 d-none">
-                            <div class="card border-info">
-                                <div class="card-header bg-info text-white">
-                                    <h6 class="mb-0">
-                                        <i class="fas fa-info-circle me-2"></i>Model Information
-                                    </h6>
-                                </div>
-                                <div class="card-body">
-                                    <p id="modelDescription" class="mb-2"></p>
-                                    <div class="d-flex gap-2">
-                                        <button id="useFormBtn" class="btn btn-sm btn-primary">
-                                            <i class="fas fa-wpforms me-1"></i>Use Form Input
-                                        </button>
-                                        <button id="useJsonBtn" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-code me-1"></i>Use JSON Input
-                                        </button>
-                                        <button id="loadSampleBtn" class="btn btn-sm btn-outline-secondary">
-                                            <i class="fas fa-magic me-1"></i>Load Sample
+                        <!-- Secondary Parameters Form -->
+                        <div class="card border-secondary mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0 text-secondary">
+                                    <i class="fas fa-clipboard-list me-2"></i>Additional Supplier Shipping Parameters
+                                </h5>
+                                <small class="text-muted">Configure detailed logistics parameters</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="leadTimeDays" class="form-label">
+                                            <i class="fas fa-clock me-2"></i>Lead Time Days
+                                            <small class="text-muted">(double)</small>
+                                        </label>
+                                        <input type="number" step="0.1" class="form-control" id="leadTimeDays" 
+                                               placeholder="Expected delivery time in days" min="0.5" max="365">
+                                        <div class="form-text">Expected delivery time in days</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="supplierReliabilityScore" class="form-label">
+                                            <i class="fas fa-star me-2"></i>Supplier Reliability Score
+                                            <small class="text-muted">(double)</small>
+                                        </label>
+                                        <input type="number" step="0.1" class="form-control" id="supplierReliabilityScore" 
+                                               placeholder="Supplier reliability rating" min="0" max="100">
+                                        <div class="form-text">Supplier reliability rating (0-100)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="weatherConditionSeverity" class="form-label">
+                                            <i class="fas fa-cloud-rain me-2"></i>Weather Condition Severity
+                                            <small class="text-muted">(double)</small>
+                                        </label>
+                                        <input type="number" step="0.1" class="form-control" id="weatherConditionSeverity" 
+                                               placeholder="Weather impact severity" min="0" max="10">
+                                        <div class="form-text">Weather impact severity score (0-10)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="routeRiskLevel" class="form-label">
+                                            <i class="fas fa-route me-2"></i>Route Risk Level
+                                            <small class="text-muted">(double)</small>
+                                        </label>
+                                        <input type="number" step="0.1" class="form-control" id="routeRiskLevel" 
+                                               placeholder="Route security and safety risk" min="0" max="10">
+                                        <div class="form-text">Route security and safety risk (0-10)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="disruptionLikelihoodScore" class="form-label">
+                                            <i class="fas fa-exclamation-circle me-2"></i>Disruption Likelihood Score
+                                            <small class="text-muted">(double)</small>
+                                        </label>
+                                        <input type="number" step="0.1" class="form-control" id="disruptionLikelihoodScore" 
+                                               placeholder="Probability of disruptions" min="0" max="100">
+                                        <div class="form-text">Probability of shipping disruptions (0-100)</div>
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <button id="loadSampleBtn" class="btn btn-outline-warning w-100">
+                                            <i class="fas fa-vial me-2"></i>Load Sample Values
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Form-based Input (Model 1) -->
-                        <div id="formInputSection" class="mb-4 d-none">
-                            <label class="form-label">
-                                <i class="fas fa-wpforms me-2"></i>Model Input Form
-                            </label>
-                            <div class="card">
-                                <div class="card-body">
-                                    <div id="dynamicForm"></div>
+                        <!-- Action Buttons -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                                    <button id="predictBtn" class="btn btn-success btn-lg flex-fill" disabled>
+                                        <i class="fas fa-calculator me-2"></i>Get Pricing Cost
+                                    </button>
+                                    <button id="clearBtn" class="btn btn-outline-secondary">
+                                        <i class="fas fa-broom me-2"></i>Reset All
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- JSON Input Data Section -->
-                        <div id="jsonInputSection" class="mb-4">
-                            <label for="inputData" class="form-label">
-                                <i class="fas fa-database me-2"></i>Input Data (JSON)
-                            </label>
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    Enter your input data in JSON format. Example formats:
-                                </small>
+                        <!-- Loading Indicator -->
+                        <div id="loadingIndicator" class="text-center d-none">
+                            <div class="spinner-border text-success" role="status">
+                                <span class="visually-hidden">Loading...</span>
                             </div>
-                            <div class="accordion mb-3" id="exampleAccordion">
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="exampleHeading">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#exampleCollapse">
-                                            <i class="fas fa-lightbulb me-2"></i>View Example Formats
-                                        </button>
-                                    </h2>
-                                    <div id="exampleCollapse" class="accordion-collapse collapse" data-bs-parent="#exampleAccordion">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <h6>Simple Instance Format:</h6>
-                                                    <pre class="bg-light p-2 small"><code>{
-  "feature1": 1.5,
-  "feature2": "value",
-  "feature3": 42
-}</code></pre>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <h6>DataFrame Split Format:</h6>
-                                                    <pre class="bg-light p-2 small"><code>{
-  "dataframe_split": {
-    "columns": ["feature1", "feature2"],
-    "data": [[1.5, "value"], [2.0, "other"]]
-  }
-}</code></pre>
-                                                </div>
+                            <p class="mt-2">
+                                <i class="fas fa-truck-loading me-2"></i>Calculating shipping costs...
+                            </p>
+                        </div>
+
+                        <!-- Results Section -->
+                        <div id="resultsSection" class="d-none">
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    <h4 class="text-center">
+                                        <i class="fas fa-chart-bar me-2"></i><span id="resultsTitle">Model Results</span>
+                                    </h4>
+                                </div>
+                            </div>
+                            
+                            <!-- Individual Model Results -->
+                            <div id="individualResults" class="d-none">
+                                <div class="row justify-content-center">
+                                    <div class="col-md-8">
+                                        <div class="card border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-robot me-2"></i><span id="selectedModelName">Model Results</span>
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div id="singleModelResults" class="results-container"></div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <textarea id="inputData" class="form-control" rows="8" placeholder='Enter JSON input data here...
-Example:
-{
-  "feature1": 1.5,
-  "feature2": "value",
-  "feature3": 42
-}'></textarea>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="d-flex gap-2 mb-4">
-                            <button id="predictBtn" class="btn btn-success" disabled>
-                                <i class="fas fa-play me-2"></i>Make Prediction
-                            </button>
-                            <button id="clearBtn" class="btn btn-outline-secondary">
-                                <i class="fas fa-eraser me-2"></i>Clear
-                            </button>
-                        </div>
-
-                        <!-- Loading Indicator -->
-                        <div id="loadingIndicator" class="text-center d-none">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                            
+                            <!-- All Models Results -->
+                            <div id="allModelsResults" class="d-none">
+                                <div class="row g-3">
+                                    <!-- 10th Percentile Model Results -->
+                                    <div class="col-md-4">
+                                        <div class="card border-success">
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-arrow-down me-2"></i>10th Percentile
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div id="xgboostResults" class="results-container"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Median Model Results (Center) -->
+                                    <div class="col-md-4">
+                                        <div class="card border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-chart-area me-2"></i>Median Model
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div id="medianResults" class="results-container"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- 90th Percentile Model Results -->
+                                    <div class="col-md-4">
+                                        <div class="card border-warning">
+                                            <div class="card-header bg-warning text-dark">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-arrow-up me-2"></i>90th Percentile
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div id="percentile90Results" class="results-container"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Comparison Summary -->
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div class="card border-info">
+                                            <div class="card-header bg-info text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-balance-scale me-2"></i>All Models Comparison Summary
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div id="comparisonSummary"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <p class="mt-2">Making prediction...</p>
-                        </div>
-
-                        <!-- Results Section -->
-                        <div id="resultsSection" class="d-none">
-                            <label class="form-label">
-                                <i class="fas fa-chart-line me-2"></i>Prediction Results
-                            </label>
-                            <div id="results" class="bg-light p-3 rounded border"></div>
                         </div>
 
                         <!-- Error Section -->
