@@ -168,7 +168,7 @@ class ShippingCostApp {
             option.value = key;
             option.textContent = model.name;
             // Set median model as default
-            if (key === 'shipping_cost_median') {
+            if (key === 'Model-1') {
                 option.selected = true;
             }
             modelSelect.appendChild(option);
@@ -367,11 +367,20 @@ class ShippingCostApp {
         document.getElementById('individualResults').classList.add('d-none');
         document.getElementById('resultsTitle').textContent = 'All Models Comparison Results';
 
-        // Map results to display containers
+        // Map results to display containers for 12 models
         const modelMapping = {
-            'shipping_cost_90th_percentile': 'percentile90Results',
-            'shipping_cost_10th_percentile': 'xgboostResults', // Note: container ID kept as 'xgboostResults' for consistency
-            'shipping_cost_median': 'medianResults'
+            'Model-1': 'Model1Results',
+            'Model-2': 'Model2Results',
+            'Model-3': 'Model3Results',
+            'Model-4': 'Model4Results',
+            'Model-5': 'Model5Results',
+            'Model-6': 'Model6Results',
+            'Model-7': 'Model7Results',
+            'Model-8': 'Model8Results',
+            'Model-9': 'Model9Results',
+            'Model-10': 'Model10Results',
+            'Model-11': 'Model11Results',
+            'Model-12': 'Model12Results'
         };
 
         // Display results for each model
@@ -639,13 +648,13 @@ class ShippingCostApp {
     }
 
     clearForm() {
-        // Reset prediction mode to individual (median default)
+        // Reset prediction mode to individual (Model-1 default)
         document.getElementById('predictionMode').value = 'individual';
         this.currentPredictionMode = 'individual';
         this.toggleModelSelection();
         
-        // Reset model selection to median default
-        document.getElementById('modelSelect').value = 'shipping_cost_median';
+        // Reset model selection to Model-1 default
+        document.getElementById('modelSelect').value = 'Model-1';
         
         // Reset primary selectors to defaults (R1 for region, clear others)
         document.getElementById('supplierCountrySelect').value = '1'; // R1
@@ -828,7 +837,7 @@ class ShippingCostApp {
             option.value = key;
             option.textContent = model.name;
             // Set median model as default
-            if (key === 'shipping_cost_median') {
+            if (key === 'model-1') {
                 option.selected = true;
             }
             modelSelect.appendChild(option);

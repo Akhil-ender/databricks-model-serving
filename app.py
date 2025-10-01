@@ -4,6 +4,7 @@ import requests
 import json
 import logging
 from config import Config
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -53,12 +54,18 @@ class DatabricksModelClient:
             logger.info(f"Making prediction with {endpoint_config['name']} at {url}")
             logger.info(f"Payload: {json.dumps(payload, indent=2)}")
             
-            response = requests.post(
-                url,
-                headers=headers,
-                json=payload,
-                timeout=30
-            )
+            # Make timeout configurable; if not set, do not pass a timeout
+            timeout_env = os.environ.get("REQUEST_TIMEOUT_SECONDS")
+            request_kwargs = {
+                "headers": headers,
+                "json": payload,
+            }
+            if timeout_env:
+                try:
+                    request_kwargs["timeout"] = float(timeout_env)
+                except ValueError:
+                    logger.warning("Invalid REQUEST_TIMEOUT_SECONDS value; ignoring")
+            response = requests.post(url, **request_kwargs)
             
             if response.status_code == 200:
                 result = response.json()
@@ -100,11 +107,16 @@ def index():
     """Serve the main page"""
     return render_template('index.html')
 
+@app.route("/metrics")
+def metrics():
+    return "ok", 200
+
 @app.route('/api/models', methods=['GET'])
 def get_models():
     """Get list of available models"""
     models = {}
-    for key, config in Config.MODEL_ENDPOINTS.items():
+    config_instance = Config()
+    for key, config in config_instance.MODEL_ENDPOINTS.items():
         models[key] = {
             'name': config['name'],
             'key': key,
@@ -270,10 +282,12 @@ def get_feature_availability():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    config_instance = Config()
     return jsonify({
         "status": "healthy",
-        "models_configured": len(Config.MODEL_ENDPOINTS)
+        "models_configured": len(config_instance.MODEL_ENDPOINTS)
     })
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8001)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port, debug=True)

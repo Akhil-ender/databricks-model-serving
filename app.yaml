@@ -1,0 +1,11 @@
+entrypoint: app.py
+
+env:
+  - name: DATABRICKS_BASE_URL
+    value: "your databricks endpoint"
+  - name: DATABRICKS_TOKEN
+    value: "your access token"
+
+resources:
+  files:
+    - requirements.txt
