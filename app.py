@@ -222,50 +222,81 @@ def predict_all():
 
 @app.route('/api/part-number', methods=['GET'])
 def get_part_number():
-    """Get part number based on MGC5 and Region"""
+    """Get SKU based on SKUGroup and Region"""
     try:
-        mgc5 = request.args.get('mgc5')
+        # Backward compatibility: accept either SKUGroup or skugroup
+        sku_group = request.args.get('SKUGroup') or request.args.get('skugroup')
         region = request.args.get('region')
         
-        if not mgc5 or not region:
-            return jsonify({"error": "Both 'mgc5' and 'region' parameters are required"}), 400
+        if not sku_group or not region:
+            return jsonify({"error": "Both 'SKUGroup' and 'region' parameters are required"}), 400
         
-        # Look up part number
-        part_number = Config.PART_NUMBER_LOOKUP.get((mgc5, region))
+        # Look up SKU via dynamic config (DB-backed if configured)
+        part_number = Config.get_part_number(sku_group, region)
         
         if not part_number:
             return jsonify({
-                "error": f"No part number found for MGC5: {mgc5}, Region: {region}",
-                "mgc5": mgc5,
+                "error": f"No SKU found for SKUGroup: {sku_group}, Region: {region}",
+                "SKUGroup": sku_group,
                 "region": region,
                 "part_number": None
             }), 404
         
         return jsonify({
-            "mgc5": mgc5,
+            "SKUGroup": sku_group,
             "region": region,
             "part_number": part_number
         })
         
     except Exception as e:
-        logger.error(f"Error in part number lookup: {str(e)}")
+        logger.error(f"Error in SKU lookup: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+@app.route('/api/sku-lookup', methods=['GET'])
+def get_sku_lookup():
+    """Get SKUGroup and region based on SKU"""
+    try:
+        sku = request.args.get('sku')
+        
+        if not sku:
+            return jsonify({"error": "SKU parameter is required"}), 400
+        
+        # Look up SKU details from Databricks table
+        sku_details = Config.get_sku_details(sku)
+        
+        if not sku_details:
+            return jsonify({
+                "error": f"No SKU found: {sku}",
+                "sku": sku,
+                "sku_group": None,
+                "region": None
+            }), 404
+        
+        return jsonify({
+            "sku": sku,
+            "sku_group": sku_details['sku_group'],
+            "region": sku_details['region']
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in SKU lookup: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 @app.route('/api/feature-availability', methods=['GET'])
 def get_feature_availability():
-    """Get feature availability based on Part Number (primary lookup)"""
+    """Get feature availability based on SKU (primary lookup)"""
     try:
         part_number = request.args.get('part_number')
         
         if not part_number:
-            return jsonify({"error": "Part number parameter is required"}), 400
+            return jsonify({"error": "SKU parameter is required"}), 400
         
-        # Look up feature availability by part number
+        # Look up feature availability by SKU
         features = Config.PART_FEATURE_AVAILABILITY.get(part_number)
         
         if not features:
             return jsonify({
-                "error": f"No feature configuration found for Part Number: {part_number}",
+                "error": f"No feature configuration found for SKU: {part_number}",
                 "part_number": part_number,
                 "features": None
             }), 404

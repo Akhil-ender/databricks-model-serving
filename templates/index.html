@@ -63,12 +63,12 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label for="partNumberDisplay" class="form-label">
-                                            <i class="fas fa-barcode me-2"></i>Part Number <span class="badge bg-primary ms-2">Primary</span>
+                                        <label for="skuDisplay" class="form-label">
+                                            <i class="fas fa-barcode me-2"></i>SKU <span class="badge bg-primary ms-2">Primary</span>
                                         </label>
-                                        <input type="text" class="form-control form-control-lg" id="partNumberDisplay" 
-                                               placeholder="Enter part number (e.g., ADX16694, KK24076)">
-                                        <div class="form-text">Primary lookup - drives Region and MGC5 selection</div>
+                                        <input type="text" class="form-control form-control-lg" id="skuDisplay" 
+                                               placeholder="Enter SKU (e.g., 24KK076, 11KK0968)">
+                                        <div class="form-text">Primary lookup - drives Region and SKUGroup selection</div>
                                     </div>
                                     <div class="col-md-4">
                                         <label for="supplierCountrySelect" class="form-label">
@@ -77,16 +77,16 @@
                                         <select id="supplierCountrySelect" class="form-select form-select-lg">
                                             <option value="">Select Region...</option>
                                         </select>
-                                        <div class="form-text">Auto-populated from Part Number</div>
+                                        <div class="form-text">Auto-populated from SKU</div>
                                     </div>
                                     <div class="col-md-4">
                                         <label for="productSelect" class="form-label">
-                                            <i class="fas fa-cube me-2"></i>MGC5
+                                            <i class="fas fa-cube me-2"></i>SKUGroup
                                         </label>
                                         <select id="productSelect" class="form-select form-select-lg">
-                                            <option value="">Select MGC5...</option>
+                                            <option value="">Select SKUGroup...</option>
                                         </select>
-                                        <div class="form-text">Auto-populated from Part Number</div>
+                                        <div class="form-text">Auto-populated from SKU</div>
                                     </div>
                                 </div>
                                 </div>

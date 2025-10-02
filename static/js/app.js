@@ -31,13 +31,13 @@ class ShippingCostApp {
 
         // Primary selector changes
         document.getElementById('supplierCountrySelect').addEventListener('change', () => {
-            this.updatePartNumber(); // This will automatically trigger updateFeatureAvailability()
+            this.updateSku(); // This will automatically trigger updateFeatureAvailability()
             this.updatePredictButton();
             this.hideResults();
         });
 
         document.getElementById('productSelect').addEventListener('change', () => {
-            this.updatePartNumber(); // This will automatically trigger updateFeatureAvailability()
+            this.updateSku(); // This will automatically trigger updateFeatureAvailability()
             this.updatePredictButton();
             this.hideResults();
         });
@@ -47,15 +47,16 @@ class ShippingCostApp {
             this.hideResults();
         });
 
-        // Part number direct input
-        document.getElementById('partNumberDisplay').addEventListener('input', (e) => {
-            const partNumber = e.target.value.trim();
-            if (partNumber && partNumber.length > 3) { // Only trigger after meaningful input
+        // SKU direct input
+        document.getElementById('skuDisplay').addEventListener('input', (e) => {
+            const sku = e.target.value.trim();
+            if (sku && sku.length > 3) { // Only trigger after meaningful input
                 this.hideError(); // Hide any previous error messages
-                this.handleDirectPartNumberInput(partNumber);
-            } else if (!partNumber) {
-                // Clear fields if part number is cleared
+                this.handleDirectSkuInput(sku);
+            } else if (!sku) {
+                // Clear fields if SKU is cleared
                 this.hideError(); // Hide any error messages
+                this.clearRegionAndSkuGroup();
                 this.resetFeatureVisibility();
                 this.updatePredictButton(); // Re-enable button if other conditions are met
             }
@@ -150,9 +151,9 @@ class ShippingCostApp {
             countrySelect.appendChild(option);
         });
 
-        // Populate MGC5 dropdown
+        // Populate SKUGroup dropdown
         const productSelect = document.getElementById('productSelect');
-        productSelect.innerHTML = '<option value="">Select MGC5...</option>';
+        productSelect.innerHTML = '<option value="">Select SKUGroup...</option>';
         this.productsData.forEach(product => {
             const option = document.createElement('option');
             option.value = product.value;
@@ -176,7 +177,7 @@ class ShippingCostApp {
         
         // Update part number on initial load if defaults are set
         // Feature availability will be automatically triggered when part number is populated
-        this.updatePartNumber();
+        this.updateSku();
     }
 
     getFormData() {
@@ -240,7 +241,7 @@ class ShippingCostApp {
         
         // Check required primary selectors
         if (!formData.supplier_country) errors.push('Region is required');
-        if (!formData.product_id) errors.push('MGC5 is required');
+        if (!formData.product_id) errors.push('SKUGroup is required');
         if (!formData.risk_classification) errors.push('Risk Classification is required');
         
         // Check required secondary inputs - only validate enabled fields
@@ -471,7 +472,7 @@ class ShippingCostApp {
 
     createAllModelsComparisonSummary(allResults, inputData) {
         const regionName = this.countriesData.find(c => c.value == inputData.supplier_country)?.text || 'Unknown';
-        const mgc5Name = this.productsData.find(p => p.value == inputData.product_id)?.text || 'Unknown';
+        const skugroupName = this.productsData.find(p => p.value == inputData.product_id)?.text || 'Unknown';
         
         // Extract values from successful results
         const values = {};
@@ -490,7 +491,7 @@ class ShippingCostApp {
                     <h6>Input Summary</h6>
                     <ul class="list-unstyled">
                         <li><strong>Region:</strong> ${regionName}</li>
-                        <li><strong>MGC5:</strong> ${mgc5Name}</li>
+                        <li><strong>skugroup:</strong> ${skugroupName}</li>
                         <li><strong>Risk Level:</strong> ${inputData.risk_classification}</li>
                         <li><strong>Lead Time:</strong> ${inputData.lead_time_days} days</li>
                         <li><strong>Reliability:</strong> ${inputData.supplier_reliability_score}%</li>
@@ -670,65 +671,120 @@ class ShippingCostApp {
         
         // Update part number based on new defaults
         // Feature availability will be automatically triggered
-        this.updatePartNumber();
+        this.updateSku();
         
         this.hideResults();
         this.hideError();
         this.updatePredictButton();
     }
 
-    async updatePartNumber() {
+    async updateSku() {
         const regionSelect = document.getElementById('supplierCountrySelect');
-        const mgc5Select = document.getElementById('productSelect');
-        const partNumberInput = document.getElementById('partNumberDisplay');
+        const skugroupSelect = document.getElementById('productSelect');
+        const skuInput = document.getElementById('skuDisplay');
         
         const regionValue = regionSelect.value;
-        const mgc5Value = mgc5Select.value;
+        const skugroupValue = skugroupSelect.value;
         
         // Clear part number if either selection is empty
-        if (!regionValue || !mgc5Value) {
-            partNumberInput.value = '';
+        if (!regionValue || !skugroupValue) {
+            skuInput.value = '';
             return;
         }
         
-        // Get region text and MGC5 text for lookup
+        // Get region text and skugroup text for lookup
         const regionText = regionSelect.options[regionSelect.selectedIndex].text;
-        const mgc5Text = mgc5Select.options[mgc5Select.selectedIndex].text;
+        const skugroupText = skugroupSelect.options[skugroupSelect.selectedIndex].text;
         
         try {
-            const response = await fetch(`/api/part-number?mgc5=${encodeURIComponent(mgc5Text)}&region=${encodeURIComponent(regionText)}`);
+            const response = await fetch(`/api/part-number?skugroup=${encodeURIComponent(skugroupText)}&region=${encodeURIComponent(regionText)}`);
             const result = await response.json();
             
             if (response.ok && result.part_number) {
-                partNumberInput.value = result.part_number;
+                skuInput.value = result.part_number;
                 // Trigger feature availability and populate related fields based on the part number
-                this.populateFieldsFromPartNumber(result.part_number);
+                this.populateFieldsFromSku(result.part_number);
             } else {
-                partNumberInput.value = 'Not found';
-                // Show message when region/MGC5 combination is not supported
-                this.showError('No price prediction model currently available for this Region/MGC5 combination. Please try a different combination.');
+                skuInput.value = 'Not found';
+                // Show message when region/skugroup combination is not supported
+                this.showError('No price prediction model currently available for this Region/skugroup combination. Please try a different combination.');
                 this.resetFeatureVisibility();
             }
         } catch (error) {
             console.error('Error fetching part number:', error);
-            partNumberInput.value = 'Error';
+            skuInput.value = 'Error';
             // Reset features on error
             this.resetFeatureVisibility();
         }
     }
 
+    async handleDirectSkuInput(sku) {
+        // When user directly enters a SKU, look up its region and SKUgroup first
+        try {
+            // First, get region and SKUgroup from SKU
+            const skuResponse = await fetch(`/api/sku-lookup?sku=${encodeURIComponent(sku)}`);
+            const skuResult = await skuResponse.json();
+            
+            if (skuResponse.ok && skuResult.sku_group && skuResult.region) {
+                // Populate region and SKUgroup dropdowns
+                this.populateRegionAndSkuGroup(skuResult.region, skuResult.sku_group);
+                
+                // Then get feature availability
+                const featureResponse = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(sku)}`);
+                const featureResult = await featureResponse.json();
+                
+                if (featureResponse.ok && featureResult.features) {
+                    this.applyFeatureVisibility(featureResult.features);
+                } else {
+                    this.resetFeatureVisibility();
+                }
+                
+                this.updatePredictButton();
+                this.hideError();
+            } else {
+                // SKU not found in lookup table
+                this.showError(`SKU "${sku}" not found in the system. Please check the SKU and try again.`);
+                this.clearRegionAndSkuGroup();
+                this.resetFeatureVisibility();
+            }
+        } catch (error) {
+            console.error('Error fetching SKU details for direct input:', error);
+            this.showError('Error looking up SKU details.');
+            this.clearRegionAndSkuGroup();
+            this.resetFeatureVisibility();
+        }
+    }
+
+    async populateFieldsFromSku(sku) {
+        // Populate form fields based on SKU and trigger feature availability
+        try {
+            const response = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(sku)}`);
+            const result = await response.json();
+            
+            if (response.ok && result.features) {
+                this.applyFeatureVisibility(result.features);
+                this.updatePredictButton();
+            } else {
+                this.resetFeatureVisibility();
+            }
+        } catch (error) {
+            console.error('Error populating fields from SKU:', error);
+            this.resetFeatureVisibility();
+        }
+    }
+
     async updateFeatureAvailability() {
-        const partNumberInput = document.getElementById('partNumberDisplay');
-        const partNumber = partNumberInput.value;
+        const skuInput = document.getElementById('skuDisplay');
+        const sku = skuInput.value;
         
-        // Reset feature visibility if part number is empty or shows error states
-        if (!partNumber || partNumber === 'Not found' || partNumber === 'Error' || partNumber.includes('Part number will appear')) {
+        // Reset feature visibility if SKU is empty or shows error states
+        if (!sku || sku === 'Not found' || sku === 'Error' || sku.includes('SKU will appear')) {
             this.resetFeatureVisibility();
             return;
         }
         
         try {
-            const response = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(partNumber)}`);
+            const response = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(sku)}`);
             const result = await response.json();
             
             if (response.ok && result.features) {
@@ -844,13 +900,13 @@ class ShippingCostApp {
         });
     }
 
-    async populateFieldsFromPartNumber(partNumber) {
+    async populateFieldsFromsku(sku) {
         // First update feature availability
         await this.updateFeatureAvailability();
         
-        // Get part number details to populate region and MGC5
+        // Get part number details to populate region and skugroup
         try {
-            const response = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(partNumber)}`);
+            const response = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(sku)}`);
             const result = await response.json();
             
             if (response.ok && result.features) {
@@ -858,7 +914,7 @@ class ShippingCostApp {
                 
                 // Populate Region field
                 const regionSelect = document.getElementById('supplierCountrySelect');
-                const mgc5Select = document.getElementById('productSelect');
+                const skugroupSelect = document.getElementById('productSelect');
                 
                 // Find and set the region value
                 const regionValue = this.getRegionValue(features.region);
@@ -866,13 +922,13 @@ class ShippingCostApp {
                     regionSelect.value = regionValue;
                 }
                 
-                // Find and set the MGC5 value  
-                const mgc5Value = this.getMGC5Value(features.mgc5);
-                if (mgc5Value) {
-                    mgc5Select.value = mgc5Value;
+                // Find and set the skugroup value  
+                const skugroupValue = this.getskugroupValue(features.skugroup);
+                if (skugroupValue) {
+                    skugroupSelect.value = skugroupValue;
                 }
                 
-                console.log(`Part Number ${partNumber} populated: Region=${features.region}, MGC5=${features.mgc5}, Category=${features.part_category}`);
+                console.log(`Part Number ${sku} populated: Region=${features.region}, skugroup=${features.skugroup}, Category=${features.part_category}`);
             }
         } catch (error) {
             console.error('Error fetching part number details:', error);
@@ -890,28 +946,28 @@ class ShippingCostApp {
         return regionMap[regionText];
     }
 
-    getMGC5Value(mgc5Text) {
-        // Convert MGC5 text (e.g., 'D1408') to dropdown value (e.g., 1408)
-        const mgc5Map = {
+    getskugroupValue(skugroupText) {
+        // Convert skugroup text (e.g., 'D1408') to dropdown value (e.g., 1408)
+        const skugroupMap = {
             'D1408': '1408',
             'D1601': '1601',
             'D0303': '303'
         };
-        return mgc5Map[mgc5Text];
+        return skugroupMap[skugroupText];
     }
 
-    async handleDirectPartNumberInput(partNumber) {
-        // User typed directly in part number field - populate region and MGC5
+    async handleDirectskuInput(sku) {
+        // User typed directly in part number field - populate region and skugroup
         try {
-            const response = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(partNumber)}`);
+            const response = await fetch(`/api/feature-availability?part_number=${encodeURIComponent(sku)}`);
             const result = await response.json();
             
             if (response.ok && result.features) {
                 const features = result.features;
                 
-                // Populate Region and MGC5 fields based on part number
+                // Populate Region and skugroup fields based on part number
                 const regionSelect = document.getElementById('supplierCountrySelect');
-                const mgc5Select = document.getElementById('productSelect');
+                const skugroupSelect = document.getElementById('productSelect');
                 
                 // Set region value
                 const regionValue = this.getRegionValue(features.region);
@@ -919,10 +975,10 @@ class ShippingCostApp {
                     regionSelect.value = regionValue;
                 }
                 
-                // Set MGC5 value
-                const mgc5Value = this.getMGC5Value(features.mgc5);
-                if (mgc5Value) {
-                    mgc5Select.value = mgc5Value;
+                // Set skugroup value
+                const skugroupValue = this.getskugroupValue(features.skugroup);
+                if (skugroupValue) {
+                    skugroupSelect.value = skugroupValue;
                 }
                 
                 // Apply feature visibility
@@ -934,12 +990,12 @@ class ShippingCostApp {
                 // Update predict button state
                 this.updatePredictButton();
                 
-                console.log(`Direct part number input "${partNumber}" populated: Region=${features.region}, MGC5=${features.mgc5}, Category=${features.part_category}`);
+                console.log(`Direct part number input "${sku}" populated: Region=${features.region}, skugroup=${features.skugroup}, Category=${features.part_category}`);
             } else {
                 // Part number not found - show "no model" message and reset features
-                this.showNoModelAvailable(partNumber);
+                this.showNoModelAvailable(sku);
                 this.resetFeatureVisibility();
-                console.log(`Part number "${partNumber}" not found in database`);
+                console.log(`Part number "${sku}" not found in database`);
             }
         } catch (error) {
             console.error('Error looking up part number:', error);
@@ -947,16 +1003,59 @@ class ShippingCostApp {
         }
     }
 
-    showNoModelAvailable(partNumber) {
-        // Clear region and MGC5 when part number is not found
+    showNoModelAvailable(sku) {
+        // Clear region and skugroup when part number is not found
         document.getElementById('supplierCountrySelect').value = '';
         document.getElementById('productSelect').value = '';
         
         // Show error message indicating no model is available
-        this.showError(`No price prediction model currently available for part number "${partNumber}".`);
+        this.showError(`No price prediction model currently available for part number "${sku}".`);
         
         // Disable the predict button
         document.getElementById('predictBtn').disabled = true;
+    }
+
+    populateRegionAndSkuGroup(region, skuGroup) {
+        // Populate region dropdown
+        const regionSelect = document.getElementById('supplierCountrySelect');
+        const regionValue = this.getRegionValueFromText(region);
+        if (regionValue) {
+            regionSelect.value = regionValue;
+        }
+        
+        // Populate SKUgroup dropdown
+        const skuGroupSelect = document.getElementById('productSelect');
+        const skuGroupValue = this.getSkuGroupValueFromText(skuGroup);
+        if (skuGroupValue) {
+            skuGroupSelect.value = skuGroupValue;
+        }
+    }
+
+    clearRegionAndSkuGroup() {
+        // Clear region and SKUgroup dropdowns
+        document.getElementById('supplierCountrySelect').value = '';
+        document.getElementById('productSelect').value = '';
+    }
+
+    getRegionValueFromText(regionText) {
+        // Convert region text (e.g., 'R1') to dropdown value (e.g., '1')
+        const regionMap = {
+            'R1': '1',
+            'R2': '2', 
+            'R3': '3',
+            'R4': '4'
+        };
+        return regionMap[regionText];
+    }
+
+    getSkuGroupValueFromText(skuGroupText) {
+        // Convert SKUgroup text (e.g., '1234') to dropdown value (e.g., '1408')
+        const skuGroupMap = {
+            '1234': '1408',
+            '4567': '1601',
+            '6789': '303'
+        };
+        return skuGroupMap[skuGroupText];
     }
 }
 

@@ -5,10 +5,10 @@ A sophisticated web application for pricing cost prediction using multiple Datab
 ## Features
 
 - **Smart Default Selection**: Auto-defaults to R1 region and median model for optimal user experience
-- **Part Number Lookup**: Real-time part number resolution based on MGC5 and Region selection
+- **SKU Lookup**: Real-time SKU resolution based on SKUGroup and Region selection
 - **Multi-Model Prediction**: Run all 3 models simultaneously or select individual models
 - **Interactive UI**: Clean, responsive web interface with Bootstrap and real-time updates
-- **Lookup Table Integration**: Comprehensive MGC5/Region to Part Number mapping
+- **Lookup Table Integration**: Comprehensive SKUGroup/Region to SKU mapping
 - **Health Monitoring**: Built-in system health checks and error handling
 - **Flexible Input**: Form-based input with validation and sample data loading
 
@@ -26,8 +26,22 @@ pip install -r requirements.txt
 Create a `.env` file with your Databricks configuration:
 
 ```env
+# Model Serving
 DATABRICKS_BASE_URL=https://your-workspace.cloud.databricks.com/serving-endpoints/shipping-price
 DATABRICKS_TOKEN=your-actual-databricks-token
+
+# Optional: Databricks SQL lookup (to replace hardcoded PART_NUMBER_LOOKUP)
+# Either provide DATABRICKS_SQL_HTTP_PATH or DATABRICKS_WAREHOUSE_ID
+DATABRICKS_SQL_HTTP_PATH=/sql/1.0/warehouses/<warehouse-id>
+# DATABRICKS_WAREHOUSE_ID=<warehouse-id>
+
+# Unity Catalog (recommended) or legacy DB
+DATABRICKS_CATALOG=hive_metastore
+DATABRICKS_SCHEMA=default
+PART_LOOKUP_TABLE=part_lookup  # table with columns: SKUGroup STRING, Region STRING, SKU STRING
+
+# Cache TTL for lookup table (seconds)
+PART_LOOKUP_TTL_SECONDS=300
 ```
 
 **⚠️ Important**: Never commit your `.env` file to git as it contains sensitive tokens!
@@ -55,7 +69,7 @@ The application supports three pricing prediction models:
 | Parameter | Type | Description | Range/Options |
 |-----------|------|-------------|---------------|
 | **Region** | Dropdown | Geographic region (R1, R2, R3, R4) | R1 (default) |
-| **MGC5** | Dropdown | Product code (D1408, D1601, D0303) | User selection |
+| **SKUGroup** | Dropdown | Product code (D1408, D1601, D0303) | User selection |
 | **Risk Level** | Dropdown | Risk classification | 1-4 (Low to Very High) |
 | **Lead Time Days** | Double | Expected delivery time | 0.5-365 days |
 | **Supplier Reliability Score** | Double | Reliability rating | 0-100% |
@@ -65,20 +79,30 @@ The application supports three pricing prediction models:
 
 ## Part Number Lookup Table
 
-The application includes a comprehensive lookup table for part number resolution:
+The application can now load the part number mapping from a Databricks table. Create a table (e.g., `hive_metastore.default.part_lookup`) with the following schema:
 
-| MGC5  | Region | Part Number |
-|-------|--------|-------------|
-| D1408 | R4     | KK24076     |
-| D1408 | R3     | KK110968    |
-| D1408 | R2     | KK113130    |
-| D1408 | R1     | ADX16694    |
-| D1601 | R4     | F682849     |
-| D1601 | R3     | AW30717     |
-| D1601 | R2     | L227221     |
-| D0303 | R4     | AH145242    |
-| D0303 | R3     | AFH218732   |
-| D0303 | R1     | ADX12969    |
+```sql
+CREATE TABLE IF NOT EXISTS hive_metastore.default.part_lookup (
+  SKUGroup STRING,
+  Region STRING,
+  SKU STRING
+);
+```
+
+Populate it with your mappings. The backend will fetch and cache these values. If the Databricks SQL configuration is not provided, it will fall back to the built-in static mapping listed below:
+
+| SKUGroup  | Region | SKU |
+|-------|--------|-----|
+| 1234 | R4     | 24KK076     |
+| 1234 | R3     | 11KK0968    |
+| 1234 | R2     | 11AB130    |
+| 1234 | R1     | 123IK78    |
+| 4567 | R4     | 76IK789     |
+| 4567 | R3     | 3AW0717     |
+| 4567 | R2     | 127IG21     |
+| 6789 | R4     | 758IK56    |
+| 6789 | R3     | 679IJ78   |
+| 6789 | R1     | 567LA98    |
 
 ## Usage
 
@@ -87,7 +111,7 @@ The application includes a comprehensive lookup table for part number resolution
 - **Region**: Automatically set to R1
 - **Prediction Mode**: All Models (simultaneous)
 - **Individual Model**: Median model pre-selected
-- **Part Number**: Auto-populates when Region and MGC5 are selected
+- **SKU**: Auto-populates when Region and SKUGroup are selected
 
 ### Prediction Modes
 
@@ -114,14 +138,14 @@ The application includes a comprehensive lookup table for part number resolution
 - `GET /api/models`: Get available models and their schemas
 - `POST /api/predict`: Make individual model predictions
 - `POST /api/predict/all`: Run all models simultaneously
-- `GET /api/part-number`: Get part number for MGC5/Region combination
+- `GET /api/part-number`: Get SKU for SKUGroup/Region combination
 - `GET /api/health`: Health check endpoint
 
 ### API Usage Examples
 
-#### Part Number Lookup
+#### SKU Lookup
 ```bash
-curl "http://localhost:8001/api/part-number?mgc5=D1408&region=R1"
+curl "http://localhost:8001/api/part-number?SKUGroup=1234&region=R1"
 ```
 
 #### Individual Prediction
@@ -191,10 +215,10 @@ databricks-model-serving/
 
 ### Adding New Lookup Entries
 
-To add new MGC5/Region combinations:
+To add new SKUGroup/Region combinations:
 
 1. Update `PART_NUMBER_LOOKUP` in `config.py`
-2. Add the new MGC5 option to model input schemas if needed
+2. Add the new SKUGroup option to model input schemas if needed
 3. The frontend will automatically support the new combinations
 
 ### Extending Models
@@ -220,7 +244,7 @@ To add new models:
 1. **ModuleNotFoundError**: Install dependencies with `pip install -r requirements.txt`
 2. **Port 8001 in use**: Change port in `app.py` or kill existing process
 3. **Missing .env file**: Create `.env` with your Databricks configuration
-4. **Part number not found**: Verify MGC5/Region combination exists in lookup table
+4. **SKU not found**: Verify SKUGroup/Region combination exists in lookup table
 5. **Model prediction failures**: Check Databricks token permissions and endpoint URLs
 
 ### Getting Help
